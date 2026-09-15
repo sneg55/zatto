@@ -15,7 +15,7 @@ export async function handleRecent(ctx: AppContext, chain: string, addr: string,
   if (!(await walletHasBuys(ctx.db, chain, wallet))) return Response.json({ newest: null, buyers: [], status: "none", reason: "this wallet has no buys on record, open it from a scan run or refresh its wallet page first" }, { status: 404 });
   const client = nansenClient(ctx, null);
   const last = await walletFetchedAt(ctx.db, chain, wallet);
-  const buys = last && now.getTime() - new Date(last).getTime() < 600_000 ? await loadBuys(ctx.db, chain, wallet, MAX_BUYS_PER_WALLET) : await fetchWalletBuys(client, ctx.db, chain, wallet, now);
+  const buys = last && now.getTime() - new Date(last).getTime() < 600_000 ? await loadBuys(ctx.db, chain, wallet, MAX_BUYS_PER_WALLET) : await fetchWalletBuys(client, ctx.db, chain, wallet, now, "recent");
   const newest = [...buys].sort((a, b) => b.ts.localeCompare(a.ts) || a.tx.localeCompare(b.tx))[0];
   if (!newest) return Response.json({ newest: null, buyers: [], status: "none" });
   const t0 = new Date(newest.ts).getTime();

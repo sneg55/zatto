@@ -41,7 +41,7 @@ describe("planJob", () => {
       if (url.endsWith("tgm/dex-trades")) return { status: 200, body: { data: [trade("0xA")], pagination: { page: 1, per_page: 1000, is_last_page: true } } };
       if (url.endsWith("profiler/dex-trades")) {
         void body;
-        return { status: 200, body: { data: [prof("0xtok", "2026-09-14T10:00:00Z"), prof("0xtok", "2026-09-14T11:00:00Z"), prof("0xtok", "2026-09-14T12:00:00Z")], pagination: { page: 1, per_page: 100, is_last_page: true } } };
+        return { status: 200, body: { data: [prof("0xtok", "2026-09-13T10:00:00Z"), prof("0xtok", "2026-09-13T11:00:00Z"), prof("0xtok", "2026-09-13T12:00:00Z")], pagination: { page: 1, per_page: 100, is_last_page: true } } };
       }
       throw new Error("unexpected " + url);
     });
@@ -50,5 +50,42 @@ describe("planJob", () => {
     expect(plan.candidates[0].buys.length).toBe(3);
     expect(plan.candidates[0].buckets.length).toBe(5);
     expect(plan.plannedRequests).toBe(3 + 5 * 2 + 3);
+  });
+
+  it("the plan phase fits its own request budget, reserving one call per wallet, and never replans discovery from zero", async () => {
+    const db = openTestDb();
+    const wallets = Array.from({ length: 12 }, (_, i) => "0xw" + i);
+    const f = fetchStub((url) => {
+      if (url.endsWith("token-screener")) return { status: 200, body: { data: Array.from({ length: 30 }, (_, i) => ({ token_address: "0xT" + i })), pagination: { page: 1, per_page: 30, is_last_page: true } } };
+      if (url.endsWith("tgm/dex-trades")) return { status: 200, body: { data: wallets.map((w) => trade(w)), pagination: { page: 1, per_page: 1000, is_last_page: true } } };
+      if (url.endsWith("profiler/dex-trades")) return { status: 200, body: { data: [prof("0xtok", "2026-09-13T10:00:00Z")], pagination: { page: 1, per_page: 100, is_last_page: true } } };
+      throw new Error("unexpected " + url);
+    });
+    const client = new NansenClient({ db, apiKey: "k", fetch: f, now: () => now, budget: 3000, sleep: async () => {} });
+    const first = await planJob(db, client, "base", now, 10_000);
+    expect(client.requests).toBe(40);
+    expect(first.candidates.length).toBe(10);
+    expect(first.candidates.every((c) => c.buys.length === 1)).toBe(true);
+
+    const replan = await planJob(db, client, "base", now, 10_000);
+    expect(client.requests - 40).toBe(30);
+    expect(replan.candidates.length).toBe(10);
+    expect(replan.candidates.every((c) => c.buys.length === 1)).toBe(true);
+  });
+
+  it("stops discovery when the step has run out of wall clock and still returns a usable plan", async () => {
+    const db = openTestDb();
+    const f = fetchStub((url) => {
+      if (url.endsWith("token-screener")) return { status: 200, body: { data: Array.from({ length: 30 }, (_, i) => ({ token_address: "0xT" + i })), pagination: { page: 1, per_page: 30, is_last_page: true } } };
+      if (url.endsWith("tgm/dex-trades")) return { status: 200, body: { data: [trade("0xA")], pagination: { page: 1, per_page: 1000, is_last_page: true } } };
+      if (url.endsWith("profiler/dex-trades")) return { status: 200, body: { data: [prof("0xtok", "2026-09-13T10:00:00Z")], pagination: { page: 1, per_page: 100, is_last_page: true } } };
+      throw new Error("unexpected " + url);
+    });
+    const client = new NansenClient({ db, apiKey: "k", fetch: f, now: () => now, budget: 3000, sleep: async () => {} });
+    let calls = 0;
+    const plan = await planJob(db, client, "base", now, 10_000, { expired: () => ++calls > 3 });
+    expect(client.requests).toBe(1 + 3 + 1);
+    expect(plan.candidates.map((c) => c.wallet)).toEqual(["0xa"]);
+    expect(plan.candidates[0].buys.length).toBe(1);
   });
 });

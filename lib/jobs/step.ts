@@ -28,7 +28,7 @@ export async function runScanStep(db: D1Like, client: NansenClient, runId: strin
   try {
     let job = (await readJob(db, runId))!;
     if (job.status === "settled") {
-      const plan = await planJob(db, client, job.chain, now, requestCap);
+      const plan = await planJob(db, client, job.chain, now, requestCap, { planRequests: budgets.planRequests, expired: over });
       await saveJobPlan(db, runId, plan.candidates, plan.plannedRequests, nowIso);
       job = (await readJob(db, runId))!;
     }

@@ -1,7 +1,7 @@
 import { loadBuys, readScore, walletFetchedAt, writeScore } from "./db/queries";
 import { bumpIp, releaseLiveSlot, sha256Hex, takeLiveSlot } from "./jobs/leases";
 import { scoreOneWallet } from "./jobs/scoreWallet";
-import { fetchWalletBuys } from "./nansen/endpoints";
+import { fetchWalletBuys, scorableCutoff } from "./nansen/endpoints";
 import { BudgetExhaustedError } from "./nansen/credits";
 import { MAX_BUYS_PER_WALLET } from "./score/constants";
 import { nansenClient, type AppContext } from "./http/context";
@@ -25,7 +25,7 @@ export async function handleLiveWallet(ctx: AppContext, chain: string, addr: str
   const client = nansenClient(ctx, runId);
   try {
     const last = await walletFetchedAt(ctx.db, chain, wallet);
-    const buys = last && now.getTime() - new Date(last).getTime() < 600_000 ? await loadBuys(ctx.db, chain, wallet, MAX_BUYS_PER_WALLET) : await fetchWalletBuys(client, ctx.db, chain, wallet, now);
+    const buys = last && now.getTime() - new Date(last).getTime() < 600_000 ? await loadBuys(ctx.db, chain, wallet, MAX_BUYS_PER_WALLET, scorableCutoff(now)) : await fetchWalletBuys(client, ctx.db, chain, wallet, now);
     const { score, partial } = await scoreOneWallet(ctx.db, client, chain, wallet, buys, now, LIVE_REQUEST_CAP);
     await writeScore(ctx.db, score, runId, now.toISOString());
     return Response.json({ score, runId, computedAt: now.toISOString(), stale: false, partial });

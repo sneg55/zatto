@@ -59,8 +59,10 @@ export async function walletFetchedAt(db: D1Like, chain: string, wallet: string)
   return r?.last_fetched ?? null;
 }
 
-export async function loadBuys(db: D1Like, chain: string, wallet: string, limit: number): Promise<Buy[]> {
-  return (await db.prepare("SELECT chain, wallet, token, tx, ts, usd, price FROM buys WHERE chain = ? AND wallet = ? ORDER BY ts DESC LIMIT ?").bind(chain, wallet, limit).all<Buy>()).results;
+export async function loadBuys(db: D1Like, chain: string, wallet: string, limit: number, notAfter?: string): Promise<Buy[]> {
+  const clause = notAfter ? " AND ts <= ?" : "";
+  const p = db.prepare(`SELECT chain, wallet, token, tx, ts, usd, price FROM buys WHERE chain = ? AND wallet = ?${clause} ORDER BY ts DESC LIMIT ?`);
+  return (await (notAfter ? p.bind(chain, wallet, notAfter, limit) : p.bind(chain, wallet, limit)).all<Buy>()).results;
 }
 
 export async function walletHasBuys(db: D1Like, chain: string, wallet: string): Promise<boolean> {

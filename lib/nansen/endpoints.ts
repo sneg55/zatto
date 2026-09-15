@@ -2,7 +2,7 @@ import type { NansenClient } from "./client";
 import type { D1Like } from "../db/d1";
 import type { Buy } from "../score/types";
 import { isQualifyingBuy, toBuy, type ProfilerTrade } from "./quote";
-import { LOOKBACK_DAYS, MAX_BUYS_PER_WALLET } from "../score/constants";
+import { LOOKBACK_DAYS, MAX_BUYS_PER_WALLET, SCORABLE_AGE_MINUTES } from "../score/constants";
 import { upsertBuys, setWalletFetched } from "../db/queries";
 
 interface Envelope<T> { data: T[]; pagination?: { page: number; per_page: number; is_last_page: boolean } }
@@ -38,14 +38,22 @@ export async function fetchTapePage(client: NansenClient, chain: string, token: 
   return { rows: data.data, isLast: data.pagination?.is_last_page ?? true };
 }
 
-export async function fetchWalletBuys(client: NansenClient, db: D1Like, chain: string, wallet: string, now: Date): Promise<Buy[]> {
+export function scorableCutoff(now: Date): string {
+  return new Date(now.getTime() - SCORABLE_AGE_MINUTES * 60_000).toISOString();
+}
+
+export async function fetchWalletBuys(client: NansenClient, db: D1Like, chain: string, wallet: string, now: Date, purpose: "score" | "recent" = "score"): Promise<Buy[]> {
   const from = new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000).toISOString();
   const { data } = await client.post<Envelope<ProfilerTrade>>("profiler/dex-trades", {
     address: wallet, chain, date: { from, to: now.toISOString() },
     order_by: [{ field: "block_timestamp", direction: "DESC" }], pagination: { page: 1, per_page: 100 },
   });
-  const buys = data.data.filter((t) => isQualifyingBuy(chain, t)).map((t) => toBuy(chain, wallet, t)).slice(0, MAX_BUYS_PER_WALLET);
-  await upsertBuys(db, buys, now.toISOString());
+  const qualifying = data.data.filter((t) => isQualifyingBuy(chain, t)).map((t) => toBuy(chain, wallet, t));
+  const cutoff = scorableCutoff(now);
+  const newest = qualifying.slice(0, MAX_BUYS_PER_WALLET);
+  const scorable = qualifying.filter((b) => b.ts <= cutoff).slice(0, MAX_BUYS_PER_WALLET);
+  const byTx = new Map(([] as Buy[]).concat(newest, scorable).map((b) => [`${b.tx}|${b.token}`, b]));
+  await upsertBuys(db, [...byTx.values()], now.toISOString());
   await setWalletFetched(db, chain, wallet.toLowerCase(), now.toISOString());
-  return buys;
+  return purpose === "recent" ? newest : scorable;
 }

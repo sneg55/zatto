@@ -23,14 +23,14 @@ describe("runScanStep", () => {
     await createJob(db, { runId: "r1", chain: "base", source: "cron", status: "settled", now: now.toISOString() });
     await saveJobPlan(db, "r1", [cand("0xa", 3), cand("0xb", 3)], 100, now.toISOString());
     const { c } = client(db);
-    const r1 = await runScanStep(db, c, "r1", now, { requests: 8, dbQueries: 10_000, seconds: 100 });
+    const r1 = await runScanStep(db, c, "r1", now, { requests: 8, planRequests: 10_000, seconds: 100 });
     expect(r1.done).toBe(false);
     const j1 = await readJob(db, "r1");
     expect(j1?.status).toBe("running");
     expect(j1?.lease_until).toBeNull();
     expect((j1?.cursor ?? 0) + (j1?.bucket_cursor ?? 0)).toBeGreaterThan(0);
     let done = false;
-    for (let i = 0; i < 20 && !done; i++) done = (await runScanStep(db, client(db).c, "r1", now, { requests: 8, dbQueries: 10_000, seconds: 100 })).done;
+    for (let i = 0; i < 20 && !done; i++) done = (await runScanStep(db, client(db).c, "r1", now, { requests: 8, planRequests: 10_000, seconds: 100 })).done;
     expect(done).toBe(true);
     const j = await readJob(db, "r1");
     expect(j?.status).toBe("done");
@@ -44,11 +44,11 @@ describe("runScanStep", () => {
     await createJob(db, { runId: "r2", chain: "base", source: "cron", status: "settled", now: now.toISOString() });
     await saveJobPlan(db, "r2", [{ ...cand("0xa", 1), dropped: "over cap" }, cand("0xb", 1)], 10, now.toISOString());
     await db.prepare("UPDATE scan_jobs SET lease_until = ? WHERE run_id = 'r2'").bind("2026-09-15T12:00:30.000Z").run();
-    const r = await runScanStep(db, client(db).c, "r2", now, { requests: 100, dbQueries: 10_000, seconds: 100 });
+    const r = await runScanStep(db, client(db).c, "r2", now, { requests: 100, planRequests: 10_000, seconds: 100 });
     expect(r.done).toBe(false);
     expect(r.failed).toMatch(/lease/);
     await db.prepare("UPDATE scan_jobs SET lease_until = NULL WHERE run_id = 'r2'").run();
-    const r2 = await runScanStep(db, client(db).c, "r2", now, { requests: 100, dbQueries: 10_000, seconds: 100 });
+    const r2 = await runScanStep(db, client(db).c, "r2", now, { requests: 100, planRequests: 10_000, seconds: 100 });
     expect(r2.done).toBe(true);
     const scores = (await db.prepare("SELECT wallet FROM scores WHERE run_id = 'r2'").all<{ wallet: string }>()).results.map((r) => r.wallet);
     expect(scores).toEqual(["0xb"]);
@@ -60,7 +60,7 @@ describe("runScanStep", () => {
     await saveJobPlan(db, "r3", [cand("0xa", 1)], 10, now.toISOString());
     const f = fetchStub([{ status: 403, body: { message: "credits" } }]);
     const c = new NansenClient({ db, apiKey: "k", fetch: f, now: () => now, budget: 100_000, sleep: async () => {} });
-    const r = await runScanStep(db, c, "r3", now, { requests: 100, dbQueries: 10_000, seconds: 100 });
+    const r = await runScanStep(db, c, "r3", now, { requests: 100, planRequests: 10_000, seconds: 100 });
     expect(r.failed).toMatch(/403/);
     expect((await readJob(db, "r3"))?.status).toBe("failed");
   });
@@ -72,7 +72,7 @@ describe("runScanStep", () => {
     const f = fetchStub((url) => (url.endsWith("tgm/dex-trades") ? okTape : { status: 403, body: { message: "credits" } }));
     const c = new NansenClient({ db, apiKey: "k", fetch: f, now: () => now, budget: 100_000, sleep: async () => {} });
     await db.prepare("INSERT INTO scores (chain, wallet, run_id, computed_at, provisional, result) VALUES ('base','0xa','zatto:scored:r4:0xa',?,1,'[]')").bind(now.toISOString()).run();
-    const r = await runScanStep(db, c, "r4", now, { requests: 100, dbQueries: 10_000, seconds: 100 });
+    const r = await runScanStep(db, c, "r4", now, { requests: 100, planRequests: 10_000, seconds: 100 });
     expect(r.failed).toMatch(/403/);
     const leftover = await db.prepare("SELECT * FROM scores WHERE run_id LIKE 'zatto:scored:r4:%'").all();
     expect(leftover.results.length).toBe(0);

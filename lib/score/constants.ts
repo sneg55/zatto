@@ -12,3 +12,4 @@ export const TAPE_PAGE_CAP = 3;
 export const TAPE_BYTES_CAP = 1_500_000;
 export const WINDOWS_MINUTES = [10, 30, 60] as const;
 export const HORIZONS_MINUTES = { h1: 60, h24: 1440 } as const;
+export const SCORABLE_AGE_MINUTES = HORIZONS_MINUTES.h24 + MATURITY_MINUTES;
