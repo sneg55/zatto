@@ -63,4 +63,15 @@ describe("sweep", () => {
     await saveJobProgress(db, "p", 3, 0, 12);
     expect((await readJob(db, "p"))?.attempts).toBe(0);
   });
+
+  it("creates the cron job on a later tick when the one at the top of the hour was missed", async () => {
+    const db = openTestDb();
+    const cfg = { chains: ["base"], cronHoursUtc: [0, 6, 12, 18], maxAttempts: 5 };
+    const r = await sweep(db, cfg, new Date("2026-09-15T12:37:00Z"), async () => {});
+    expect(r.created).toMatch(/^cron-base-/);
+    const again = await sweep(db, cfg, new Date("2026-09-15T12:42:00Z"), async () => {});
+    expect(again.created).toBeNull();
+    const nextWindow = await sweep(db, cfg, new Date("2026-09-15T18:02:00Z"), async () => {});
+    expect(nextWindow.created).toMatch(/^cron-base-/);
+  });
 });

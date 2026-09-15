@@ -4,6 +4,7 @@ import { getTape } from "./nansen/tape";
 import { hourKey } from "./score/perBuy";
 import { MAX_BUYS_PER_WALLET } from "./score/constants";
 import { bumpIp, sha256Hex } from "./jobs/leases";
+import { LIVE_MAX_THROTTLE_MS } from "./nansen/client";
 import { nansenClient, type AppContext } from "./http/context";
 
 export async function handleRecent(ctx: AppContext, chain: string, addr: string, ip: string): Promise<Response> {
@@ -13,7 +14,7 @@ export async function handleRecent(ctx: AppContext, chain: string, addr: string,
   const hits = await bumpIp(ctx.db, await sha256Hex(`recent:${ip}`), now.toISOString().slice(0, 13));
   if (hits > Number(ctx.env.LIVE_WALLET_PER_IP_PER_HOUR)) return Response.json({ newest: null, buyers: [], status: "none", reason: "per-ip limit" }, { status: 429 });
   if (!(await walletHasBuys(ctx.db, chain, wallet))) return Response.json({ newest: null, buyers: [], status: "none", reason: "this wallet has no buys on record, open it from a scan run or refresh its wallet page first" }, { status: 404 });
-  const client = nansenClient(ctx, null);
+  const client = nansenClient(ctx, null, LIVE_MAX_THROTTLE_MS);
   const last = await walletFetchedAt(ctx.db, chain, wallet);
   const buys = last && now.getTime() - new Date(last).getTime() < 600_000 ? await loadBuys(ctx.db, chain, wallet, MAX_BUYS_PER_WALLET) : await fetchWalletBuys(client, ctx.db, chain, wallet, now, "recent");
   const newest = [...buys].sort((a, b) => b.ts.localeCompare(a.ts) || a.tx.localeCompare(b.tx))[0];

@@ -72,4 +72,11 @@ describe("scoreBuy", () => {
     const t = scoreBuy({ buy, buckets: buckets(onlyAfter), closes: std });
     expect(t.newBuyers).toEqual({ m10: 6, m30: 8, m60: 12 });
   });
+
+  it("a buy too young to have a 24 hour candle reads immature, not no-price", () => {
+    const young = scoreBuy({ buy, buckets: buckets(crowdedRows, { final: false }), closes: closes([[0, 1.0], [1, 1.05]]) });
+    expect(young.exclusion).toBe("immature");
+    const stale = scoreBuy({ buy, buckets: buckets(crowdedRows), closes: closes([[0, 1.0], [1, 1.05]]) });
+    expect(stale.exclusion).toBe("no-price");
+  });
 });

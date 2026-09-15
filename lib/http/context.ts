@@ -17,8 +17,8 @@ export async function buildContext(): Promise<AppContext> {
   return { db: getDb(), env, now: () => new Date(), fetch: globalThis.fetch.bind(globalThis), waitUntil: getWaitUntil() };
 }
 
-export function nansenClient(ctx: AppContext, runId: string | null): NansenClient {
-  return new NansenClient({ db: ctx.db, apiKey: ctx.env.NANSEN_API_KEY, fetch: ctx.fetch, now: ctx.now, budget: Number(ctx.env.DAILY_CREDIT_BUDGET), runId });
+export function nansenClient(ctx: AppContext, runId: string | null, maxThrottleMs?: number): NansenClient {
+  return new NansenClient({ db: ctx.db, apiKey: ctx.env.NANSEN_API_KEY, fetch: ctx.fetch, now: ctx.now, budget: Number(ctx.env.DAILY_CREDIT_BUDGET), runId, maxThrottleMs });
 }
 
 export function triggerStep(ctx: AppContext, runId: string): void {

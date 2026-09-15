@@ -6,8 +6,10 @@ export const NANSEN_BASE = "https://api.nansen.ai/api/v1/";
 
 export interface NansenClientOptions {
   db: D1Like; apiKey: string; fetch: typeof fetch; now: () => Date; budget: number;
-  runId?: string | null; sleep?: (ms: number) => Promise<void>;
+  runId?: string | null; sleep?: (ms: number) => Promise<void>; maxThrottleMs?: number;
 }
+
+export const LIVE_MAX_THROTTLE_MS = 2_000;
 
 export class NansenClient {
   public requests = 0;
@@ -46,7 +48,8 @@ export class NansenClient {
     const last = await lastRateRemaining(this.o.db);
     if (!last || last.minute == null || last.minute >= 20) return;
     const age = this.o.now().getTime() - new Date(last.ts).getTime();
-    if (age < 60_000) await this.sleep(60_000 - age);
+    if (age >= 60_000) return;
+    await this.sleep(Math.min(60_000 - age, this.o.maxThrottleMs ?? 60_000));
   }
 }
 

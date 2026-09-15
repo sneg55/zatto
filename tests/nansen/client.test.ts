@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { openTestDb } from "../helpers/d1";
 import { fetchStub } from "../helpers/fetchStub";
-import { NansenClient } from "@/lib/nansen/client";
+import { LIVE_MAX_THROTTLE_MS, NansenClient } from "@/lib/nansen/client";
 import { BudgetExhaustedError } from "@/lib/nansen/credits";
 
 const now = () => new Date("2026-09-15T10:00:00Z");
@@ -52,6 +52,14 @@ describe("NansenClient", () => {
     const sleep = vi.fn(async () => {});
     const c = new NansenClient({ db, apiKey: "k", fetch: fetchStub([{ status: 200, body: {} }]), now, budget: 3000, sleep });
     await c.post("tgm/dex-trades", {});
-    expect(sleep).toHaveBeenCalled();
+    expect(sleep).toHaveBeenCalledWith(50_000);
+  });
+  it("caps the throttle sleep when a caller sets a maximum, so a user-facing request is not held for a minute", async () => {
+    const db = openTestDb();
+    await db.prepare("INSERT INTO calls (ts, endpoint, credits, status, remaining_minute) VALUES (?,?,?,?,?)").bind("2026-09-15T09:59:50.000Z", "x", 1, "ok", 5).run();
+    const sleep = vi.fn(async () => {});
+    const c = new NansenClient({ db, apiKey: "k", fetch: fetchStub([{ status: 200, body: {} }]), now, budget: 3000, sleep, maxThrottleMs: LIVE_MAX_THROTTLE_MS });
+    await c.post("tgm/dex-trades", {});
+    expect(sleep).toHaveBeenCalledWith(LIVE_MAX_THROTTLE_MS);
   });
 });

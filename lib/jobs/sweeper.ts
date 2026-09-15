@@ -20,7 +20,7 @@ export async function sweep(db: D1Like, cfg: SweepConfig, now: Date, trigger: (r
   }
   let created: string | null = null;
   for (const chain of cfg.chains) {
-    const due = cfg.cronHoursUtc.includes(now.getUTCHours()) && now.getUTCMinutes() < 5;
+    const due = cfg.cronHoursUtc.includes(now.getUTCHours());
     const last = await latestCronJobCreatedAt(db, chain);
     const recent = last !== null && now.getTime() - new Date(last).getTime() < 5 * 3_600_000;
     if (due && !recent) {
