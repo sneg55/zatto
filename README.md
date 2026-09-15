@@ -90,6 +90,15 @@ PAYER_KEY=0x... npm run pay -- https://<your-host>/api/scan/base
 
 A settled job that later fails (step limit, a Nansen error, budget exhaustion) is shown on its scan page as failed, with the reason and the settlement transaction. Failed paid runs are refunded manually by the operator on request, with that transaction as the reference. Nothing about a refund is automatic.
 
+### If a paid scan does not run
+
+A job can reach one of two states where the payment may have settled but the app never recorded the outcome:
+
+- Status `settling`: the app claimed the job and called the facilitator but crashed or timed out before storing the result. The scan page shows it as not started, retrying the same payment returns 202 with the same run id pointing at a scan page that never progresses, and `/api/health` lists it under `settling` jobs.
+- Status `failed` with the error "settlement facilitator unreachable": the facilitator call threw after the payment may have already been submitted. Retrying returns 402.
+
+In both cases, the resolution is manual. Check the payment nonce against the facilitator or on chain. If it settled, the operator refunds or reruns the scan by hand. Neither state auto-recovers because failing a `settling` job on a timer could mislabel a successful settlement as failed. The scan page for a run shows its status and any error, and `/api/health` lists jobs by status.
+
 ## Method
 
 Constants live in `lib/score/constants.ts`. They are choices made for this build, not measurements of anything:
