@@ -131,7 +131,7 @@ table.data a:hover {
   border-radius: var(--radius);
   border: 1px solid var(--ink-black);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -180,7 +180,7 @@ table.data a:hover {
 }
 
 .delta-neg {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .delta-na {
