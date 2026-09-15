@@ -3,11 +3,11 @@ import { readCandleGaps, readCloses, writeCandleGap, writeCloses } from "../db/q
 import { MATURITY_MINUTES } from "../score/constants";
 import type { NansenClient } from "./client";
 
-interface Candle { timestamp?: string; date?: string; time?: string; close: number }
+interface Candle { interval_start?: string; timestamp?: string; date?: string; time?: string; close: number }
 interface OhlcvResponse { token_address: string; timeframe: string; truncated?: boolean; truncation_note?: string | null; data: Candle[] }
 
 function minuteOf(c: Candle): string | null {
-  const ms = Date.parse(c.timestamp ?? c.date ?? c.time ?? "");
+  const ms = Date.parse(c.interval_start ?? c.timestamp ?? c.date ?? c.time ?? "");
   return Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 16) : null;
 }
 

@@ -42,6 +42,16 @@ describe("getCloses", () => {
     expect((await db.prepare("SELECT COUNT(*) AS n FROM candle_gap").first<{ n: number }>())?.n).toBe(0);
   });
 
+  it("reads the real candle shape, keyed on interval_start, and writes no gap", async () => {
+    const db = openTestDb();
+    const now = new Date("2026-09-15T15:00:00Z");
+    const f = fetchStub([{ status: 200, body: { token_address: "0xtok", timeframe: "1m", truncated: false, data: [{ interval_start: "2026-09-15T14:23:00Z", open: 145.9, high: 146.3, low: 145.7, close: 146.1, volume: null, volume_usd: 146.1, market_cap: { open: 1, high: 1, low: 1, close: 1 } }] } }]);
+    const m = await getCloses(db, c(db, f, now), "base", "0xtok", ["2026-09-15T14:23"], now);
+    expect(m.get("2026-09-15T14:23")).toEqual({ close: 146.1, final: true });
+    const gaps = (await db.prepare("SELECT COUNT(*) AS n FROM candle_gap").first<{ n: number }>())?.n;
+    expect(gaps).toBe(0);
+  });
+
   it("records a missing gap instead of throwing when a candle carries no readable timestamp", async () => {
     const db = openTestDb();
     const now = new Date("2026-09-10T15:00:00Z");
