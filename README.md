@@ -134,7 +134,7 @@ The burst ratio ran a median of 1.02x, 2.64x at the 75th percentile, 17.00x at t
 
 The crowding is concentrated rather than spread: 10 of the 42 tokens account for every crowded buy. LOTTO carried 17 of them over 35 scored buys and returned a median +106.6%, and `$POOP` drew a crowd on all 8 of its buys at a median burst of 17.00x. No wallet was CROWDED, because that needs more than half of one wallet's own buys to draw a crowd and the highest was well under it.
 
-Three of the thirty wallets carry byte-identical buy lists under different transaction hashes: the same tokens, the same minutes, the same returns. They are a genuine address cluster, not a duplicated row, and the scan page labels them as one.
+The board also names an address cluster: seven of the thirty wallets carry byte-identical buy lists under different transaction hashes, the same eight tokens at the same minutes with the same returns. That is a fleet, not a duplicated row, and the scan page says so under each address, because seven identical rows would otherwise read as a rendering fault and their scored buys are one set of observations rather than seven.
 
 ## Endpoints used
 
