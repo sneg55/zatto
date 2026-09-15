@@ -60,4 +60,21 @@ describe("getTape", () => {
     const b = await getTape(db, client(db, f, now), "base", "0xtok", "2026-09-10T14", now, "score", async (ms) => { waits.push(ms); await new Promise((r) => setTimeout(r, 60)); });
     expect(b.rows.length).toBe(1);
   });
+  it("re-checks the stored bucket after acquiring the lock and skips a redundant fetch when it is already final", async () => {
+    const db = openTestDb();
+    const now = new Date("2026-09-10T16:00:00Z");
+    await db.prepare("INSERT INTO tape_lock (chain, token, hour, lease_until) VALUES (?,?,?,?)").bind("base", "0xtok", "2026-09-10T14", "2026-09-10T16:00:30.000Z").run();
+    const f = fetchStub([page([trade("2026-09-10T14:03:11Z", "0xa")], true)]);
+    const finishedRows = JSON.stringify([["2026-09-10T14:03:11.000Z", "0xa", "BUY", 10, 1, "0x0xa", null]]);
+    setTimeout(async () => {
+      await db.prepare(
+        "INSERT INTO tape (chain, token, hour, rows, row_count, pages_exhausted, capped, matured, fetched_at, bytes) VALUES (?,?,?,?,?,?,?,?,?,?)"
+      ).bind("base", "0xtok", "2026-09-10T14", finishedRows, 1, 1, 0, 1, now.toISOString(), finishedRows.length).run();
+      await db.prepare("DELETE FROM tape_lock").run();
+    }, 50);
+    const b = await getTape(db, client(db, f, now), "base", "0xtok", "2026-09-10T14", now, "score", async (ms) => { await new Promise((r) => setTimeout(r, 60)); });
+    expect(b.final).toBe(true);
+    expect(b.rows.length).toBe(1);
+    expect(f.calls.length).toBe(0);
+  });
 });

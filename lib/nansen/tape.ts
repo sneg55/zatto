@@ -1,5 +1,5 @@
 import type { D1Like } from "../db/d1";
-import { readTape, releaseTapeLock, takeTapeLock, writeTape } from "../db/queries";
+import { readTape, releaseTapeLock, takeTapeLock, writeTape, type TapeRowRecord } from "../db/queries";
 import { MATURITY_MINUTES, TAPE_BYTES_CAP, TAPE_PAGE_CAP } from "../score/constants";
 import type { TapeBucket, TapeRow } from "../score/types";
 import type { NansenClient } from "./client";
@@ -26,6 +26,16 @@ function bucketFrom(row: { rows: string; pages_exhausted: number; matured: numbe
   return { rows: JSON.parse(row.rows) as TapeRow[], final: row.pages_exhausted === 1 && row.matured === 1 && row.capped === 0, capped: row.capped === 1 };
 }
 
+function decideFromStored(hour: string, stored: TapeRowRecord, now: Date, purpose: "score" | "recent"): TapeBucket | null {
+  const final = stored.pages_exhausted === 1 && stored.matured === 1 && stored.capped === 0;
+  const stale = refetchSlot(hour, now.toISOString(), REFETCH_MS[purpose]) > refetchSlot(hour, stored.fetched_at, REFETCH_MS[purpose]);
+  const needsMaturityRefetch = stored.matured === 0 && isMatured(hour, now);
+  if (final || stored.capped === 1 || (!needsMaturityRefetch && !stale)) {
+    return { hour, rows: JSON.parse(stored.rows) as TapeRow[], final, capped: stored.capped === 1 };
+  }
+  return null;
+}
+
 async function fetchAndStore(db: D1Like, client: NansenClient, chain: string, token: string, hour: string, now: Date): Promise<TapeBucket> {
   const rows: TapeRow[] = [];
   let exhausted = false, capped = false;
@@ -44,12 +54,8 @@ async function fetchAndStore(db: D1Like, client: NansenClient, chain: string, to
 export async function getTape(db: D1Like, client: NansenClient, chain: string, token: string, hour: string, now: Date, purpose: "score" | "recent", sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))): Promise<TapeBucket> {
   const stored = await readTape(db, chain, token, hour);
   if (stored) {
-    const final = stored.pages_exhausted === 1 && stored.matured === 1 && stored.capped === 0;
-    const stale = refetchSlot(hour, now.toISOString(), REFETCH_MS[purpose]) > refetchSlot(hour, stored.fetched_at, REFETCH_MS[purpose]);
-    const needsMaturityRefetch = stored.matured === 0 && isMatured(hour, now);
-    if (final || stored.capped === 1 || (!needsMaturityRefetch && !stale)) {
-      return { hour, rows: JSON.parse(stored.rows) as TapeRow[], final, capped: stored.capped === 1 };
-    }
+    const decided = decideFromStored(hour, stored, now, purpose);
+    if (decided) return decided;
   }
   const leaseUntil = new Date(now.getTime() + 30_000).toISOString();
   let got = await takeTapeLock(db, chain, token, hour, now.toISOString(), leaseUntil);
@@ -67,6 +73,11 @@ export async function getTape(db: D1Like, client: NansenClient, chain: string, t
     if (!got) return { hour, rows: stored ? (JSON.parse(stored.rows) as TapeRow[]) : [], final: false, capped: false };
   }
   try {
+    const fresh = await readTape(db, chain, token, hour);
+    if (fresh) {
+      const decided = decideFromStored(hour, fresh, now, purpose);
+      if (decided) return decided;
+    }
     return await fetchAndStore(db, client, chain, token, hour, now);
   } finally {
     await releaseTapeLock(db, chain, token, hour);
