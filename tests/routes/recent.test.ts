@@ -46,4 +46,19 @@ describe("recent", () => {
     const live = await db.prepare("SELECT count FROM ip_counters WHERE ip_hash = ?").bind(await sha256Hex("8.8.8.8")).first<{ count: number }>();
     expect(live).toBeNull();
   });
+
+  it("a budget-exhausted spend returns the stale shape with a reason instead of a 500, using what is already in D1", async () => {
+    const db = openTestDb();
+    const now = new Date("2026-09-15T12:10:00Z");
+    await db.prepare("INSERT INTO buys (chain, wallet, token, tx, ts, usd, price, fetched_at) VALUES (?,?,?,?,?,?,?,?)").bind("base", W, "0xt", "0xown", "2026-09-15T12:05:00.000Z", 10, 1, now.toISOString()).run();
+    const f = fetchStub([{ status: 200, body: { data: [], pagination: { is_last_page: true } } }]);
+    const c: AppContext = { db, env: { DB: db, NANSEN_API_KEY: "k", X402_PAY_TO: "0x1", INTERNAL_SECRET: "s", FACILITATOR_URL: "https://f", DAILY_CREDIT_BUDGET: "0", RUN_REQUEST_CAP: "600", LIVE_WALLET_PER_IP_PER_HOUR: "10", LIVE_WALLET_CONCURRENCY: "2", PUBLIC_BASE_URL: "https://z.test" }, now: () => now, fetch: f, waitUntil: () => {} };
+    const r = await handleRecent(c, "base", W, "3.3.3.3");
+    expect(r.status).toBe(200);
+    const j = await r.json() as { newest: { tx: string } | null; buyers: unknown[]; status: string; stale: boolean; reason: string };
+    expect(j.stale).toBe(true);
+    expect(j.reason).toBe("budget exhausted");
+    expect(j.newest?.tx).toBe("0xown");
+    expect(j.buyers).toEqual([]);
+  });
 });
