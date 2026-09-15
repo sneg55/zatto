@@ -45,6 +45,7 @@
   font-size: 16px;
   font-weight: 600;
   color: var(--ink-black);
+  overflow-wrap: anywhere;
 }
 
 .meta-value.muted {

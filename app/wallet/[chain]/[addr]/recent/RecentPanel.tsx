@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { StatusTag } from "@/app/_components/Tag";
+import { shortAddr } from "@/lib/format";
 
 type Recent = { newest: { token: string; ts: string; tx: string } | null; buyers: Array<{ address: string; secondsAfter: number; usd: number | null; tx: string }>; status: "final" | "provisional" | "none"; reason?: string; stale?: boolean };
 
@@ -44,7 +45,7 @@ export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }
         <div className="meta-item">
           <span className="meta-label">Newest buy</span>
           <span className="meta-value">
-            {data.newest.token} <span className="pill-note"><a href={`https://basescan.org/tx/${data.newest.tx}`}>tx</a></span>
+            {shortAddr(data.newest.token)} <span className="pill-note"><a href={`https://basescan.org/tx/${data.newest.tx}`}>tx</a></span>
           </span>
         </div>
         <div className="meta-item">
@@ -74,7 +75,7 @@ export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }
               <tr><td colSpan={4} className="row-muted">No qualifying buyers found yet.</td></tr>
             ) : data.buyers.map((b) => (
               <tr key={b.tx}>
-                <td className="wallet-addr">{b.address}</td>
+                <td className="wallet-addr">{shortAddr(b.address)}</td>
                 <td className="num">{b.secondsAfter}</td>
                 <td className="num">{b.usd ?? ""}</td>
                 <td><a href={`https://basescan.org/tx/${b.tx}`}>tx</a></td>
