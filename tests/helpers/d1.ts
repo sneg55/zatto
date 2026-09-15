@@ -5,7 +5,7 @@ import type { D1Like, D1Prepared } from "@/lib/db/d1";
 
 export function openTestDb(): D1Like {
   const sqlite = new Database(":memory:");
-  const dir = path.resolve(__dirname, "../../migrations");
+  const dir = path.resolve(import.meta.dirname, "../../migrations");
   for (const f of readdirSync(dir).sort()) sqlite.exec(readFileSync(path.join(dir, f), "utf8"));
   const prepare = (sql: string): D1Prepared => {
     let bound: unknown[] = [];
