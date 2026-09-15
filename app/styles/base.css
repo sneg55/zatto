@@ -134,6 +134,10 @@ table {
   margin: 0 0 12px;
 }
 
+h1, h2, h3, section, .band, .pooled {
+  scroll-margin-top: 72px;
+}
+
 h1, h2, h3 {
   font-family: var(--font-ui);
   font-weight: 700;

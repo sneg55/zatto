@@ -10,7 +10,7 @@ import type { BuyScore, TapeBucket } from "../score/types";
 import { planJob } from "./planner";
 import { minutesNeeded } from "./scoreWallet";
 import type { Candidate, StepBudgets } from "./types";
-import { LEASE_SECONDS } from "./leases";
+import { LEASE_SECONDS, PLAN_LEASE_SECONDS } from "./leases";
 
 const RUN_REQUEST_CAP = 3000;
 
@@ -20,7 +20,10 @@ function scratchKey(runId: string, wallet: string): string {
 
 export async function runScanStep(db: D1Like, client: NansenClient, runId: string, now: Date, budgets: StepBudgets, requestCap = RUN_REQUEST_CAP): Promise<{ done: boolean; failed?: string }> {
   const nowIso = now.toISOString();
-  const leased = await takeJobLease(db, runId, nowIso, new Date(now.getTime() + LEASE_SECONDS * 1000).toISOString());
+  const pending = await readJob(db, runId);
+  if (!pending) return { done: false, failed: "no such job" };
+  const seconds = pending.status === "settled" ? PLAN_LEASE_SECONDS : LEASE_SECONDS;
+  const leased = await takeJobLease(db, runId, nowIso, new Date(now.getTime() + seconds * 1000).toISOString());
   if (!leased) return { done: false, failed: "lease held or job not runnable" };
   const started = Date.now();
   const startRequests = client.requests;

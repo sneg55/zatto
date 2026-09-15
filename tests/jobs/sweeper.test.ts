@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { openTestDb } from "../helpers/d1";
 import { sweep } from "@/lib/jobs/sweeper";
 import { createJob, readJob, saveJobProgress } from "@/lib/db/queries";
-import { LEASE_SECONDS } from "@/lib/jobs/leases";
+import { LEASE_SECONDS, PLAN_LEASE_SECONDS } from "@/lib/jobs/leases";
 import { DEFAULT_BUDGETS } from "@/lib/jobs/types";
 
 describe("sweep", () => {
@@ -79,8 +79,12 @@ describe("sweep", () => {
 });
 
 describe("lease length", () => {
-  it("outlasts the slowest step a run can take, so the sweeper cannot start a second plan on top of one in flight", () => {
-    const worstStepSeconds = DEFAULT_BUDGETS.seconds + DEFAULT_BUDGETS.planRequests * 5;
-    expect(LEASE_SECONDS).toBeGreaterThan(worstStepSeconds);
+  it("covers a planning step, which runs its whole discovery budget before it can yield", () => {
+    expect(PLAN_LEASE_SECONDS).toBeGreaterThan(DEFAULT_BUDGETS.planRequests * 5);
+  });
+
+  it("keeps the scoring lease near the step budget, so a worker that dies does not park the run", () => {
+    expect(LEASE_SECONDS).toBeGreaterThan(DEFAULT_BUDGETS.seconds);
+    expect(LEASE_SECONDS).toBeLessThan(PLAN_LEASE_SECONDS / 2);
   });
 });
