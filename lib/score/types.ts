@@ -25,3 +25,23 @@ export interface BuyScore {
   usable: boolean;
   exclusion: "capped" | "immature" | "no-price" | null;
 }
+
+export type Verdict = "THIN" | "CROWDED" | "QUIET";
+export type GroupStat = { n: number; median: number | null; insufficient: boolean };
+
+export interface WalletScore {
+  chain: string; wallet: string;
+  n: number; nCrowded: number; nUncrowded: number; tokens: number;
+  excluded: { capped: number; immature: number; noPrice: number };
+  newBuyersPerBuy: number | null; baselinePerBuy: number | null;
+  fastShare: { mean: number | null; contributing: number };
+  delayed24h: { crowded: GroupStat; uncrowded: GroupStat };
+  delayed1h: { crowded: GroupStat; uncrowded: GroupStat };
+  leader24h: { crowded: GroupStat; uncrowded: GroupStat };
+  leader1h: { crowded: GroupStat; uncrowded: GroupStat };
+  crowdedShare: number | null;
+  verdict: Verdict;
+  returnNote: string;
+  provisional: boolean;
+  buys: BuyScore[];
+}
