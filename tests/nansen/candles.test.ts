@@ -9,13 +9,13 @@ const c = (db: ReturnType<typeof openTestDb>, f: typeof fetch, now: Date) => new
 describe("getCloses", () => {
   it("fetches the covering range once, marks past minutes final, records missing and pending gaps", async () => {
     const db = openTestDb();
-    const now = new Date("2026-09-10T15:00:00Z");
+    const now = new Date("2026-09-10T18:00:00Z");
     const f = fetchStub([{ status: 200, body: { token_address: "0xtok", timeframe: "1m", truncated: false, data: [{ timestamp: "2026-09-10T14:03:00Z", close: 1 }, { timestamp: "2026-09-10T14:04:00Z", close: 1.05 }] } }]);
-    const m = await getCloses(db, c(db, f, now), "base", "0xtok", ["2026-09-10T14:03", "2026-09-10T14:04", "2026-09-10T14:05", "2026-09-11T14:03"], now);
+    const m = await getCloses(db, c(db, f, now), "base", "0xtok", ["2026-09-10T14:03", "2026-09-10T14:04", "2026-09-10T15:10", "2026-09-11T14:03"], now);
     expect(m.get("2026-09-10T14:03")).toEqual({ close: 1, final: true });
-    expect(m.has("2026-09-10T14:05")).toBe(false);
+    expect(m.has("2026-09-10T15:10")).toBe(false);
     const gaps = (await db.prepare("SELECT minute, reason FROM candle_gap ORDER BY minute").all<{ minute: string; reason: string }>()).results;
-    expect(gaps).toEqual([{ minute: "2026-09-10T14:05", reason: "missing" }, { minute: "2026-09-11T14:03", reason: "pending" }]);
+    expect(gaps).toEqual([{ minute: "2026-09-10T15:10", reason: "missing" }, { minute: "2026-09-11T14:03", reason: "pending" }]);
     await getCloses(db, c(db, f, now), "base", "0xtok", ["2026-09-10T14:03"], now);
     expect(f.calls.length).toBe(1);
   });
@@ -50,6 +50,35 @@ describe("getCloses", () => {
     expect(m.get("2026-09-15T14:23")).toEqual({ close: 146.1, final: true });
     const gaps = (await db.prepare("SELECT COUNT(*) AS n FROM candle_gap").first<{ n: number }>())?.n;
     expect(gaps).toBe(0);
+  });
+
+  it("carries the last close forward when the nearest earlier candle is within the bound", async () => {
+    const db = openTestDb();
+    const now = new Date("2026-09-10T18:00:00Z");
+    const f = fetchStub([{ status: 200, body: { token_address: "0xtok", timeframe: "1m", truncated: false, data: [{ timestamp: "2026-09-10T14:00:00Z", close: 2 }] } }]);
+    const m = await getCloses(db, c(db, f, now), "base", "0xtok", ["2026-09-10T14:40"], now);
+    expect(m.get("2026-09-10T14:40")).toEqual({ close: 2, final: true });
+    expect((await db.prepare("SELECT COUNT(*) AS n FROM candle_gap").first<{ n: number }>())?.n).toBe(0);
+  });
+
+  it("leaves a target missing when the nearest earlier candle is beyond the carry-forward bound", async () => {
+    const db = openTestDb();
+    const now = new Date("2026-09-10T18:00:00Z");
+    const f = fetchStub([{ status: 200, body: { token_address: "0xtok", timeframe: "1m", truncated: false, data: [{ timestamp: "2026-09-10T14:00:00Z", close: 2 }] } }]);
+    const m = await getCloses(db, c(db, f, now), "base", "0xtok", ["2026-09-10T15:05"], now);
+    expect(m.has("2026-09-10T15:05")).toBe(false);
+    const g = await db.prepare("SELECT reason FROM candle_gap").first<{ reason: string }>();
+    expect(g?.reason).toBe("missing");
+  });
+
+  it("leaves a target missing when there is no earlier candle at all", async () => {
+    const db = openTestDb();
+    const now = new Date("2026-09-10T18:00:00Z");
+    const f = fetchStub([{ status: 200, body: { token_address: "0xtok", timeframe: "1m", truncated: false, data: [{ timestamp: "2026-09-10T14:30:00Z", close: 2 }] } }]);
+    const m = await getCloses(db, c(db, f, now), "base", "0xtok", ["2026-09-10T14:10"], now);
+    expect(m.has("2026-09-10T14:10")).toBe(false);
+    const g = await db.prepare("SELECT reason FROM candle_gap").first<{ reason: string }>();
+    expect(g?.reason).toBe("missing");
   });
 
   it("records a missing gap instead of throwing when a candle carries no readable timestamp", async () => {

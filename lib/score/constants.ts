@@ -8,6 +8,7 @@ export const LOOKBACK_DAYS = 30;
 export const MAX_BUYS_PER_WALLET = 10;
 export const TOP_WALLETS = 10;
 export const MATURITY_MINUTES = 15;
+export const CARRY_FORWARD_MAX_MINUTES = 60;
 export const TAPE_PAGE_CAP = 3;
 export const TAPE_BYTES_CAP = 1_500_000;
 export const WINDOWS_MINUTES = [10, 30, 60] as const;
