@@ -1,10 +1,10 @@
 import type { D1Like, ZattoEnv } from "../db/d1";
-import { getDb, getEnv, getWaitUntil } from "../db/d1";
 import { NansenClient } from "../nansen/client";
 
 export interface AppContext { db: D1Like; env: ZattoEnv; now: () => Date; fetch: typeof fetch; waitUntil: (p: Promise<unknown>) => void }
 
-export function buildContext(): AppContext {
+export async function buildContext(): Promise<AppContext> {
+  const { getDb, getEnv, getWaitUntil } = await import("../db/d1");
   return { db: getDb(), env: getEnv(), now: () => new Date(), fetch: globalThis.fetch.bind(globalThis), waitUntil: getWaitUntil() };
 }
 

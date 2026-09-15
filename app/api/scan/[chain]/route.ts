@@ -6,5 +6,5 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ chain: string }> }) {
   const { chain } = await params;
-  return handlePaidScan(buildContext(), req, chain);
+  return handlePaidScan(await buildContext(), req, chain);
 }

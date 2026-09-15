@@ -42,10 +42,17 @@ export async function handlePaidScan(ctx: AppContext, req: NextRequest, chain: s
   if (!paymentId) return Response.json({ error: "payment payload missing authorization" }, { status: 402 });
   const now = ctx.now();
   const existing = await readJobByPayment(ctx.db, paymentId);
+  if (existing && existing.status === "failed") return Response.json({ run_id: existing.run_id, error: existing.error }, { status: 402 });
   if (existing) return Response.json({ run_id: existing.run_id, payment_tx: existing.payment_tx, url: `${ctx.env.PUBLIC_BASE_URL}/scan/${chain}/${existing.run_id}` }, { status: 202 });
   const runId = `paid-${chain}-${now.getTime().toString(36)}`;
   await createJob(ctx.db, { runId, chain, source: "paid", status: "created", paymentId, now: now.toISOString() });
-  const settle = await httpServer.processSettlement(result.paymentPayload, result.paymentRequirements, result.declaredExtensions, { request: context }, undefined, result.beforeHandlerSettlement);
+  let settle;
+  try {
+    settle = await httpServer.processSettlement(result.paymentPayload, result.paymentRequirements, result.declaredExtensions, { request: context }, undefined, result.beforeHandlerSettlement);
+  } catch {
+    await failJob(ctx.db, runId, "settlement facilitator unreachable", now.toISOString());
+    return Response.json({ error: "settlement facilitator unreachable" }, { status: 503 });
+  }
   if (!settle.success) {
     await failJob(ctx.db, runId, `settlement failed: ${settle.errorReason}`, now.toISOString());
     return toResponse(settle.response);

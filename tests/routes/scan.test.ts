@@ -23,6 +23,15 @@ function server(script: { verified: boolean; settleOk: boolean }) {
   } as never;
 }
 
+function throwingSettleServer() {
+  return {
+    processHTTPRequest: async (c: { paymentHeader?: string }) => c.paymentHeader
+      ? { type: "payment-verified", paymentPayload: payload, paymentRequirements: { scheme: "exact", network: "eip155:8453", asset: "0xusdc", amount: "5000000", payTo: "0x1", maxTimeoutSeconds: 300, extra: {} }, cancellationDispatcher: { cancel: async () => null } }
+      : { type: "payment-error", response: { status: 402, headers: {}, body: { error: "payment required" } } },
+    processSettlement: async () => { throw new Error("facilitator timeout"); },
+  } as never;
+}
+
 describe("paid scan", () => {
   it("returns 402 with the PAYMENT-REQUIRED header when unpaid and writes nothing", async () => {
     const db = openTestDb();
@@ -48,6 +57,24 @@ describe("paid scan", () => {
     expect(r.status).toBe(402);
     const job = await db.prepare("SELECT status, error FROM scan_jobs").first<{ status: string; error: string }>();
     expect(job?.status).toBe("failed"); expect(job?.error).toMatch(/insufficient_funds/);
+    expect(c.triggered.length).toBe(0);
+  });
+  it("a facilitator throw during settlement marks the job failed and returns 503, nothing is triggered", async () => {
+    const db = openTestDb(); const c = ctx(db);
+    const r = await handlePaidScan(c, req("sig"), "base", throwingSettleServer());
+    expect(r.status).toBe(503);
+    const job = await db.prepare("SELECT status, error, payment_tx FROM scan_jobs").first<{ status: string; error: string; payment_tx: string | null }>();
+    expect(job?.status).toBe("failed"); expect(job?.error).toBe("settlement facilitator unreachable"); expect(job?.payment_tx).toBeNull();
+    expect(c.triggered.length).toBe(0);
+  });
+  it("a replay after a settlement throw does not present the orphaned job as a success", async () => {
+    const db = openTestDb(); const c = ctx(db);
+    await handlePaidScan(c, req("sig"), "base", throwingSettleServer());
+    const replay = await handlePaidScan(c, req("sig"), "base", throwingSettleServer());
+    expect(replay.status).not.toBe(202);
+    const body = await replay.json() as { payment_tx?: string };
+    expect(body.payment_tx).toBeUndefined();
+    expect((await db.prepare("SELECT COUNT(*) AS n FROM scan_jobs").first<{ n: number }>())?.n).toBe(1);
     expect(c.triggered.length).toBe(0);
   });
 });
