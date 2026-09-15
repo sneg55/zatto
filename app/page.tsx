@@ -3,17 +3,51 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main>
-      <h1>Zatto</h1>
-      <p>Point it at a Smart Money wallet and it tells you how many new buyers show up after it buys, how fast, and what buying after it would have returned.</p>
-      <h2>What it measures</h2>
-      <ul>
-        <li>New buyers: distinct addresses that buy the same token within 10, 30 and 60 minutes after the wallet's buy, against the token's prior-hour rate.</li>
-        <li>Fast arrivals: the share of those buyers arriving within 20 seconds.</li>
-        <li>Returns: the token's price from the wallet's fill, and from a delayed entry one minute later, at 1 hour and 24 hours.</li>
-      </ul>
-      <h2>Verdicts</h2>
-      <p>CROWDED when more than half of usable buys drew at least three times the prior-hour buyer rate. QUIET otherwise. THIN under five usable buys. The return note is stated only when both groups have at least three mature buys.</p>
-      <p><Link href="/scan/base">Base leaderboard</Link></p>
+      <section className="section" style={{ paddingTop: 8 }}>
+        <h1 className="display-hero">Zatto</h1>
+        <p className="lede">
+          Point it at a Smart Money wallet and it tells you how many new buyers show up after it buys, how fast, and
+          what buying after it would have returned.
+        </p>
+        <p className="link-row" style={{ marginTop: 24 }}>
+          <Link href="/scan/base" className="btn">Base leaderboard</Link>
+        </p>
+      </section>
+
+      <section className="section">
+        <h2 className="display-sub">What it measures</h2>
+        <ul className="card-list">
+          <li className="card">
+            <p>
+              New buyers: distinct addresses that buy the same token within 10, 30 and 60 minutes after the
+              wallet&apos;s buy, against the token&apos;s prior-hour rate.
+            </p>
+          </li>
+          <li className="card">
+            <p>Fast arrivals: the share of those buyers arriving within 20 seconds.</p>
+          </li>
+          <li className="card">
+            <p>
+              Returns: the token&apos;s price from the wallet&apos;s fill, and from a delayed entry one minute
+              later, at 1 hour and 24 hours.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section className="section section-band" style={{ borderRadius: "var(--radius)", paddingInline: 24 }}>
+        <h2 className="display-sub">Verdicts</h2>
+        <p className="link-row" style={{ marginBottom: 16 }}>
+          <span className="tag tag-crowded">CROWDED</span>
+          <span className="tag tag-quiet">QUIET</span>
+          <span className="tag tag-thin">THIN</span>
+        </p>
+        <p>
+          CROWDED when more than half of usable buys drew at least three times the prior-hour buyer rate. QUIET
+          otherwise. THIN under five usable buys. The return note is stated only when both groups have at least
+          three mature buys.
+        </p>
+      </section>
     </main>
   );
 }
