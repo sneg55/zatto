@@ -1,0 +1,141 @@
+:where(html, body, div, span, table, th, td, form, input, button, ul, li, h1, h2, h3, p, a, section, main, header, footer) {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--paper-white);
+  color: var(--ink-black);
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--ink-black);
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+.shell {
+  max-width: var(--max-width);
+  margin-inline: auto;
+  padding: 32px 24px 64px;
+}
+
+.site-footer {
+  border-top: 1px solid var(--ink-black);
+  margin-top: 80px;
+}
+
+.site-footer .shell {
+  padding-top: 24px;
+  padding-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.site-footer a {
+  font-size: 12px;
+  color: var(--graphite);
+  text-decoration: none;
+  border-bottom: 1px solid var(--fog);
+}
+
+.site-footer a:hover {
+  color: var(--ink-black);
+  border-color: var(--ink-black);
+}
+
+.display-hero {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 60px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+}
+
+@media (min-width: 720px) {
+  .display-hero {
+    font-size: 80px;
+  }
+}
+
+.display-sub {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+}
+
+h1 { font-size: 22px; }
+h2 { font-size: 20px; }
+h3 { font-size: 16px; }
+
+p {
+  margin: 0 0 12px;
+  color: var(--charcoal);
+}
+
+.lede {
+  font-size: 20px;
+  line-height: 1.4;
+  color: var(--charcoal);
+  max-width: 640px;
+}
+
+.section {
+  padding-block: 48px;
+}
+
+.section + .section {
+  border-top: 1px solid var(--stone);
+}
+
+.section-band {
+  background: var(--stone);
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--graphite);
+  margin: 0 0 8px;
+}
+
+@media (max-width: 560px) {
+  .shell {
+    padding: 24px 16px 48px;
+  }
+
+  .display-hero {
+    font-size: 40px;
+  }
+
+  .display-sub {
+    font-size: 28px;
+  }
+}

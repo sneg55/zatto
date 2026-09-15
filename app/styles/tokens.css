@@ -1,0 +1,23 @@
+:root {
+  --glide-teal: #71eaee;
+  --teal-mist: #e4feff;
+  --ink-black: #000000;
+  --obsidian: #171715;
+  --slate: #242421;
+  --charcoal: #303030;
+  --graphite: #5c5c5c;
+  --ash-gray: #80807c;
+  --fog: #999991;
+  --stone: #d9dad3;
+  --bone: #edede8;
+  --paper-white: #ffffff;
+
+  --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+
+  --radius: 6px;
+  --unit: 4px;
+  --max-width: 1200px;
+
+  color-scheme: light;
+}
