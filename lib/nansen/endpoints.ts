@@ -42,16 +42,19 @@ export function scorableCutoff(now: Date): string {
   return new Date(now.getTime() - SCORABLE_AGE_MINUTES * 60_000).toISOString();
 }
 
-export async function fetchWalletBuys(client: NansenClient, db: D1Like, chain: string, wallet: string, now: Date, purpose: "score" | "recent" = "score"): Promise<Buy[]> {
-  const from = new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000).toISOString();
+async function fetchProfilerBuys(client: NansenClient, chain: string, wallet: string, from: string, to: string): Promise<Buy[]> {
   const { data } = await client.post<Envelope<ProfilerTrade>>("profiler/dex-trades", {
-    address: wallet, chain, date: { from, to: now.toISOString() },
+    address: wallet, chain, date: { from, to },
     order_by: [{ field: "block_timestamp", direction: "DESC" }], pagination: { page: 1, per_page: 100 },
   });
-  const qualifying = data.data.filter((t) => isQualifyingBuy(chain, t)).map((t) => toBuy(chain, wallet, t));
+  return data.data.filter((t) => isQualifyingBuy(chain, t)).map((t) => toBuy(chain, wallet, t));
+}
+
+export async function fetchWalletBuys(client: NansenClient, db: D1Like, chain: string, wallet: string, now: Date, purpose: "score" | "recent" = "score"): Promise<Buy[]> {
+  const from = new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000).toISOString();
   const cutoff = scorableCutoff(now);
-  const newest = qualifying.slice(0, MAX_BUYS_PER_WALLET);
-  const scorable = qualifying.filter((b) => b.ts <= cutoff).slice(0, MAX_BUYS_PER_WALLET);
+  const scorable = (await fetchProfilerBuys(client, chain, wallet, from, cutoff)).filter((b) => b.ts <= cutoff).slice(0, MAX_BUYS_PER_WALLET);
+  const newest = (await fetchProfilerBuys(client, chain, wallet, from, now.toISOString())).slice(0, MAX_BUYS_PER_WALLET);
   const byTx = new Map(([] as Buy[]).concat(newest, scorable).map((b) => [`${b.tx}|${b.token}`, b]));
   await upsertBuys(db, [...byTx.values()], now.toISOString());
   await setWalletFetched(db, chain, wallet.toLowerCase(), now.toISOString());

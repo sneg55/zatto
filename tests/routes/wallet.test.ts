@@ -22,7 +22,7 @@ describe("live wallet", () => {
     expect(j.score.verdict).toBe("THIN"); expect(j.stale).toBe(false);
     const r2 = await handleLiveWallet(c, "base", W, "1.1.1.1");
     expect(((await r2.json()) as { stale: boolean }).stale).toBe(false);
-    expect((await db.prepare("SELECT COUNT(*) AS n FROM calls").first<{ n: number }>())?.n).toBe(1);
+    expect((await db.prepare("SELECT COUNT(*) AS n FROM calls").first<{ n: number }>())?.n).toBe(2);
   });
   it("per-ip limit and busy slot return stale with a reason", async () => {
     const db = openTestDb(); const c = ctx(db);
