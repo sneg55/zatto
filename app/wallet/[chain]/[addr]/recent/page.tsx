@@ -5,7 +5,8 @@ export default async function RecentPage({ params }: { params: Promise<{ chain: 
   const wallet = addr.toLowerCase();
   return (
     <main>
-      <h1>Recent buys, {chain}</h1>
+      <p className="eyebrow">{chain} wallet</p>
+      <h1>Recent buys</h1>
       <RecentPanel chain={chain} wallet={wallet} />
     </main>
   );
