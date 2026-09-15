@@ -27,4 +27,28 @@ describe("getCloses", () => {
     const g = await db.prepare("SELECT reason FROM candle_gap").first<{ reason: string }>();
     expect(g?.reason).toBe("truncated");
   });
+
+  it("writes only the requested minutes when the response carries the whole 24 hour range", async () => {
+    const db = openTestDb();
+    const now = new Date("2026-09-12T15:00:00Z");
+    const t0 = Date.parse("2026-09-10T14:03:00Z");
+    const data = Array.from({ length: 1441 }, (_, i) => ({ timestamp: new Date(t0 + i * 60_000).toISOString(), close: 1 + i / 1000 }));
+    const f = fetchStub([{ status: 200, body: { token_address: "0xtok", timeframe: "1m", truncated: false, data } }]);
+    const wanted = ["2026-09-10T14:03", "2026-09-10T14:04", "2026-09-10T15:03", "2026-09-11T14:03"];
+    const m = await getCloses(db, c(db, f, now), "base", "0xtok", wanted, now);
+    const stored = (await db.prepare("SELECT minute FROM candles ORDER BY minute").all<{ minute: string }>()).results.map((r) => r.minute);
+    expect(stored).toEqual(wanted);
+    expect(m.size).toBe(4);
+    expect((await db.prepare("SELECT COUNT(*) AS n FROM candle_gap").first<{ n: number }>())?.n).toBe(0);
+  });
+
+  it("records a missing gap instead of throwing when a candle carries no readable timestamp", async () => {
+    const db = openTestDb();
+    const now = new Date("2026-09-10T15:00:00Z");
+    const f = fetchStub([{ status: 200, body: { token_address: "0xtok", timeframe: "1m", truncated: false, data: [{ opened_at: "2026-09-10T14:03:00Z", close: 1 }] } }]);
+    const m = await getCloses(db, c(db, f, now), "base", "0xtok", ["2026-09-10T14:03"], now);
+    expect(m.size).toBe(0);
+    const g = await db.prepare("SELECT minute, reason FROM candle_gap").first<{ minute: string; reason: string }>();
+    expect(g).toEqual({ minute: "2026-09-10T14:03", reason: "missing" });
+  });
 });

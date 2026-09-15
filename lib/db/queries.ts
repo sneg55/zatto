@@ -69,6 +69,16 @@ export async function readTape(db: D1Like, chain: string, token: string, hour: s
   return db.prepare("SELECT rows, row_count, pages_exhausted, capped, matured, fetched_at FROM tape WHERE chain = ? AND token = ? AND hour = ?").bind(chain, token, hour).first<TapeRowRecord>();
 }
 
+export async function finalTapeBuckets(db: D1Like, chain: string, tokens: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  for (let i = 0; i < tokens.length; i += 90) {
+    const chunk = tokens.slice(i, i + 90);
+    const rows = (await db.prepare(`SELECT token, hour FROM tape WHERE chain = ? AND token IN (${chunk.map(() => "?").join(",")}) AND pages_exhausted = 1 AND matured = 1 AND capped = 0`).bind(chain, ...chunk).all<{ token: string; hour: string }>()).results;
+    for (const r of rows) out.add(`${r.token}|${r.hour}`);
+  }
+  return out;
+}
+
 export async function writeTape(db: D1Like, p: { chain: string; token: string; hour: string; rows: TapeRow[]; pagesExhausted: boolean; capped: boolean; matured: boolean; fetchedAt: string }): Promise<void> {
   const json = JSON.stringify(p.rows);
   await db.prepare(

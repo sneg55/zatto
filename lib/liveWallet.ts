@@ -30,8 +30,8 @@ export async function handleLiveWallet(ctx: AppContext, chain: string, addr: str
     await writeScore(ctx.db, score, runId, now.toISOString());
     return Response.json({ score, runId, computedAt: now.toISOString(), stale: false, partial });
   } catch (e) {
-    if (e instanceof BudgetExhaustedError) return Response.json({ ...(cached ?? {}), stale: true, reason: "daily budget exhausted" }, { status: cached ? 200 : 503 });
-    throw e;
+    const reason = e instanceof BudgetExhaustedError ? "daily budget exhausted" : `live scoring failed: ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`;
+    return Response.json({ ...(cached ?? {}), stale: true, reason }, { status: cached ? 200 : 503 });
   } finally {
     await releaseLiveSlot(ctx.db, slot);
   }

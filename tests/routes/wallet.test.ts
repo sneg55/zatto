@@ -5,6 +5,7 @@ import { handleLiveWallet } from "@/lib/liveWallet";
 import { readScore, writeScore } from "@/lib/db/queries";
 import { scoreWallet } from "@/lib/score/perWallet";
 import type { AppContext } from "@/lib/http/context";
+import type { D1Prepared } from "@/lib/db/d1";
 
 const W = "0x" + "a".repeat(40);
 function ctx(db: ReturnType<typeof openTestDb>, budget = "3000"): AppContext {
@@ -50,5 +51,19 @@ describe("live wallet", () => {
     expect(unpinned?.runId).toBe(j.runId);
     const pinned = await readScore(db, "base", W, oldRunId);
     expect(pinned?.runId).toBe(oldRunId);
+  });
+
+  it("a database or upstream failure returns 503 with a reason rather than throwing", async () => {
+    const db = openTestDb();
+    const c = ctx(db);
+    await db.prepare("INSERT INTO wallet_fetch (chain, wallet, last_fetched) VALUES (?,?,?)").bind("base", W, "2026-09-15T11:55:00.000Z").run();
+    const boom = (): never => { throw new Error("D1_ERROR: too many API requests by single worker invocation"); };
+    const failing: D1Prepared = { bind: () => failing, first: async () => boom(), all: async () => boom(), run: async () => boom() };
+    const broken: AppContext = { ...c, db: { prepare: (sql) => (/ buys /.test(sql) ? failing : db.prepare(sql)), batch: (s) => db.batch(s) } };
+    const r = await handleLiveWallet(broken, "base", W, "6.6.6.6");
+    expect(r.status).toBe(503);
+    const j = await r.json() as { stale: boolean; reason: string };
+    expect(j.stale).toBe(true);
+    expect(j.reason).toMatch(/too many API requests/);
   });
 });

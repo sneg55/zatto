@@ -1,5 +1,5 @@
 import type { D1Like } from "../db/d1";
-import { readTape } from "../db/queries";
+import { finalTapeBuckets } from "../db/queries";
 import type { NansenClient } from "../nansen/client";
 import { getCloses } from "../nansen/candles";
 import { getTape } from "../nansen/tape";
@@ -27,12 +27,9 @@ export function bucketsFor(buys: Buy[]): Array<{ token: string; hour: string }> 
 }
 
 export async function countMissingBuckets(db: D1Like, chain: string, buckets: Array<{ token: string; hour: string }>): Promise<number> {
-  let n = 0;
-  for (const b of buckets) {
-    const t = await readTape(db, chain, b.token, b.hour);
-    if (!t || !(t.pages_exhausted === 1 && t.matured === 1 && t.capped === 0)) n++;
-  }
-  return n;
+  if (buckets.length === 0) return 0;
+  const final = await finalTapeBuckets(db, chain, [...new Set(buckets.map((b) => b.token))]);
+  return buckets.filter((b) => !final.has(`${b.token}|${b.hour}`)).length;
 }
 
 export async function scoreBuysWithData(db: D1Like, client: NansenClient, chain: string, buys: Buy[], now: Date, stop: () => boolean): Promise<{ scored: BuyScore[]; skipped: number }> {
