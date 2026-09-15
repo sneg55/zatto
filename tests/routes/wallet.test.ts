@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { openTestDb } from "../helpers/d1";
 import { fetchStub } from "../helpers/fetchStub";
 import { handleLiveWallet } from "@/lib/liveWallet";
+import { readScore, writeScore } from "@/lib/db/queries";
+import { scoreWallet } from "@/lib/score/perWallet";
 import type { AppContext } from "@/lib/http/context";
 
 const W = "0x" + "a".repeat(40);
@@ -34,5 +36,19 @@ describe("live wallet", () => {
     const db = openTestDb(); const c = ctx(db, "0");
     const r = await handleLiveWallet(c, "base", W, "4.4.4.4");
     expect(r.status).toBe(503); expect(((await r.json()) as { reason: string }).reason).toBe("daily budget exhausted");
+  });
+  it("a live refresh outranks a pinned scan-run snapshot for the unpinned lookup but leaves the pinned one alone", async () => {
+    const db = openTestDb();
+    const oldRunId = "cron-base-2026091500";
+    await writeScore(db, scoreWallet("base", W, []), oldRunId, "2026-09-15T10:00:00.000Z");
+    const c = ctx(db);
+    const r = await handleLiveWallet(c, "base", W, "5.5.5.5");
+    const j = await r.json() as { runId: string; stale: boolean };
+    expect(j.stale).toBe(false);
+    expect(j.runId.startsWith("live-")).toBe(true);
+    const unpinned = await readScore(db, "base", W, null);
+    expect(unpinned?.runId).toBe(j.runId);
+    const pinned = await readScore(db, "base", W, oldRunId);
+    expect(pinned?.runId).toBe(oldRunId);
   });
 });
