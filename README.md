@@ -38,6 +38,8 @@ npx wrangler d1 create zatto
 
 Paste the database id the last command prints into `wrangler.jsonc`, replacing `REPLACE_AFTER_wrangler_d1_create`.
 
+In the same file, replace the `PUBLIC_BASE_URL` var, which ships as `https://zatto.REPLACE.workers.dev`, with the URL the Worker will be deployed to. It is the host the scan step trigger calls and the host in the scan URL a payer gets back, so every request fails with a message pointing here until it is set.
+
 ```
 npm run cf-typegen
 npm run migrate:remote
@@ -48,7 +50,7 @@ npx wrangler secret put FACILITATOR_URL
 npm run deploy
 ```
 
-`wrangler secret put` sets the key the deployed Worker uses. `scripts/proof.ts` runs locally and reads its own copy from `.dev.vars`, so copy `.dev.vars.example` to `.dev.vars` and fill in a real `NANSEN_API_KEY` before the next step.
+`wrangler secret put` sets the key the deployed Worker uses. `INTERNAL_SECRET` is yours to invent and is never shown to anyone: `openssl rand -hex 32` prints a usable one to paste at the prompt. `scripts/proof.ts` runs locally and reads its own copy from `.dev.vars`, so copy `.dev.vars.example` to `.dev.vars` and fill in a real `NANSEN_API_KEY` before the next step.
 
 ```
 npm run proof

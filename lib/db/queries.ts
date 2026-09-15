@@ -63,6 +63,11 @@ export async function loadBuys(db: D1Like, chain: string, wallet: string, limit:
   return (await db.prepare("SELECT chain, wallet, token, tx, ts, usd, price FROM buys WHERE chain = ? AND wallet = ? ORDER BY ts DESC LIMIT ?").bind(chain, wallet, limit).all<Buy>()).results;
 }
 
+export async function walletHasBuys(db: D1Like, chain: string, wallet: string): Promise<boolean> {
+  const r = await db.prepare("SELECT 1 AS present FROM buys WHERE chain = ? AND wallet = ? LIMIT 1").bind(chain, wallet).first<{ present: number }>();
+  return r !== null;
+}
+
 export interface TapeRowRecord { rows: string; row_count: number; pages_exhausted: number; capped: number; matured: number; fetched_at: string }
 
 export async function readTape(db: D1Like, chain: string, token: string, hour: string): Promise<TapeRowRecord | null> {
@@ -152,7 +157,11 @@ export async function saveJobPlan(db: D1Like, runId: string, candidates: Candida
 }
 
 export async function saveJobProgress(db: D1Like, runId: string, cursor: number, bucketCursor: number, usedRequests: number): Promise<void> {
-  await db.prepare("UPDATE scan_jobs SET cursor = ?, bucket_cursor = ?, used_requests = ? WHERE run_id = ?").bind(cursor, bucketCursor, usedRequests, runId).run();
+  await db.prepare(
+    `UPDATE scan_jobs SET cursor = ?, bucket_cursor = ?, used_requests = ?,
+       attempts = CASE WHEN ? > cursor OR (? = cursor AND ? > bucket_cursor) THEN 0 ELSE attempts END
+     WHERE run_id = ?`
+  ).bind(cursor, bucketCursor, usedRequests, cursor, cursor, bucketCursor, runId).run();
 }
 
 export async function publishJob(db: D1Like, runId: string, finishedAt: string, usedRequests: number): Promise<void> {

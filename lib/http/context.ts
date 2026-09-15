@@ -3,9 +3,18 @@ import { NansenClient } from "../nansen/client";
 
 export interface AppContext { db: D1Like; env: ZattoEnv; now: () => Date; fetch: typeof fetch; waitUntil: (p: Promise<unknown>) => void }
 
+export function assertPublicBaseUrl(url: string | undefined): string {
+  if (!url || url.includes("REPLACE")) {
+    throw new Error(`PUBLIC_BASE_URL is not set to a real host (got ${url ?? "nothing"}). Put the deployed Worker URL in wrangler.jsonc: the scan step trigger and the scan URL handed to a payer are both built from it.`);
+  }
+  return url;
+}
+
 export async function buildContext(): Promise<AppContext> {
   const { getDb, getEnv, getWaitUntil } = await import("../db/d1");
-  return { db: getDb(), env: getEnv(), now: () => new Date(), fetch: globalThis.fetch.bind(globalThis), waitUntil: getWaitUntil() };
+  const env = getEnv();
+  assertPublicBaseUrl(env.PUBLIC_BASE_URL);
+  return { db: getDb(), env, now: () => new Date(), fetch: globalThis.fetch.bind(globalThis), waitUntil: getWaitUntil() };
 }
 
 export function nansenClient(ctx: AppContext, runId: string | null): NansenClient {

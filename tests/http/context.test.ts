@@ -13,4 +13,12 @@ describe("http context lazy db import", () => {
     expect(typeof mod.buildContext).toBe("function");
     expect(getCloudflareContext).not.toHaveBeenCalled();
   });
+
+  it("refuses the placeholder PUBLIC_BASE_URL with a message naming the file to edit", async () => {
+    const mod = await import("@/lib/http/context");
+    expect(() => mod.assertPublicBaseUrl("https://zatto.REPLACE.workers.dev")).toThrow(/wrangler\.jsonc/);
+    expect(() => mod.assertPublicBaseUrl("")).toThrow(/PUBLIC_BASE_URL/);
+    expect(() => mod.assertPublicBaseUrl(undefined)).toThrow(/PUBLIC_BASE_URL/);
+    expect(mod.assertPublicBaseUrl("https://zatto.example.workers.dev")).toBe("https://zatto.example.workers.dev");
+  });
 });

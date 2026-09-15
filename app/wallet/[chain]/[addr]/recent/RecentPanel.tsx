@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-type Recent = { newest: { token: string; ts: string; tx: string } | null; buyers: Array<{ address: string; secondsAfter: number; usd: number | null; tx: string }>; status: "final" | "provisional" | "none" };
+type Recent = { newest: { token: string; ts: string; tx: string } | null; buyers: Array<{ address: string; secondsAfter: number; usd: number | null; tx: string }>; status: "final" | "provisional" | "none"; reason?: string };
 
 export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }) {
   const [data, setData] = useState<Recent | null>(null);
@@ -14,7 +14,7 @@ export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }
   };
   useEffect(() => { void load(); }, []);
   if (!data) return <p>Loading</p>;
-  if (!data.newest) return <p>No qualifying buys in 30 days.</p>;
+  if (!data.newest) return <p>{data.reason ?? "No qualifying buys in 30 days."}</p>;
   return (
     <section>
       <p>Newest buy: token {data.newest.token} at {data.newest.ts} (<a href={`https://basescan.org/tx/${data.newest.tx}`}>tx</a>). Bucket status: <strong>{data.status}</strong>{data.status === "provisional" ? ", bucket not final" : ""}. {note}</p>
