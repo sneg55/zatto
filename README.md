@@ -45,12 +45,17 @@ npx wrangler secret put NANSEN_API_KEY
 npx wrangler secret put X402_PAY_TO
 npx wrangler secret put INTERNAL_SECRET
 npx wrangler secret put FACILITATOR_URL
-npm run seed:fixtures
 npm run deploy
-npm run proof
 ```
 
-`npm run seed:fixtures` loads the committed `tests/fixtures/real/` snapshot into D1 so the leaderboard and one wallet page render before Zatto has made a single Nansen call of its own. `npm run proof` is a live check against the real API that prints its own request count.
+`wrangler secret put` sets the key the deployed Worker uses. `scripts/proof.ts` runs locally and reads its own copy from `.dev.vars`, so copy `.dev.vars.example` to `.dev.vars` and fill in a real `NANSEN_API_KEY` before the next step.
+
+```
+npm run proof
+npm run seed:fixtures
+```
+
+`npm run proof` is a live check against the real API. It prints its own request count and writes its raw responses to `tests/fixtures/real/`, including `wallet-score.json`. `npm run seed:fixtures` is optional: once that file exists, it loads it into D1 as one completed run so the leaderboard and one wallet page render without waiting for the first cron run. The repo does not ship with a fixture snapshot; only `tests/fixtures/real/.gitkeep` is checked in. Run `proof` first, or `seed:fixtures` has nothing to load and exits with an error saying so.
 
 ### Troubleshooting
 
@@ -59,10 +64,15 @@ npm run proof
 ## Local with fixtures
 
 ```
-ZATTO_LOCAL=1 npm run migrate:local && ZATTO_LOCAL=1 npm run seed:fixtures && npm run dev
+ZATTO_LOCAL=1 npm run migrate:local
 ```
 
-This runs Zatto against a local D1 database seeded from the same committed fixtures, with no Nansen key required.
+Once `npm run proof` has produced `tests/fixtures/real/wallet-score.json` (see Quick start, that step needs a real `NANSEN_API_KEY`), seed the local database from it and run the app with no further Nansen calls:
+
+```
+ZATTO_LOCAL=1 npm run seed:fixtures
+npm run dev
+```
 
 ## Paid scans
 
@@ -94,7 +104,7 @@ Constants live in `lib/score/constants.ts`. They are choices made for this build
 | `MAX_BUYS_PER_WALLET` | 20 | The most recent qualifying buys kept per wallet |
 | `MATURITY_MINUTES` | 15 | How long after an hour bucket or a candle minute Zatto waits before treating it as final, to allow for late-indexed trades |
 
-Observations from `scripts/proof.ts` against the live API: a single `tgm/dex-trades` page for one token and one past hour typically returns well under the 1,000-row page size, so one page usually covers an hour bucket; `tgm/token-ohlcv` occasionally omits a target minute, which Zatto records as a `candle_gap` row rather than treating the return as zero.
+What the code does today: an hour bucket is fetched from `tgm/dex-trades` up to 3 pages of 1,000 rows; a bucket that still needs a 4th page, or whose stored rows exceed 1,500,000 bytes, is marked capped and every buy that needs it becomes unusable. A `tgm/token-ohlcv` minute with no matching candle in the response is recorded as a `candle_gap` row (`missing`, `truncated`, or `pending`) rather than treated as a zero return. This section has not been filled in with measured request counts or row counts from a real run. No `NANSEN_API_KEY` has been available to run `scripts/proof.ts` against the live API yet; those numbers replace this paragraph once a real proof run has happened.
 
 ## Endpoints used
 

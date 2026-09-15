@@ -8,10 +8,21 @@ if (!payerKey) { console.error("PAYER_KEY missing"); process.exit(1); }
 
 const POLL_INTERVAL_MS = 15_000;
 const POLL_TIMEOUT_MS = 20 * 60_000;
+const FETCH_TIMEOUT_MS = 30_000;
 const MIN_USABLE_BUYS = 5;
 
+const timedFetch: typeof fetch = async (input, init) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 async function getHealth(): Promise<unknown> {
-  const res = await fetch(`${zattoUrl}/api/health`);
+  const res = await timedFetch(`${zattoUrl}/api/health`);
   const body = await res.json();
   console.log(res.status, JSON.stringify(body));
   return body;
@@ -26,7 +37,7 @@ console.log("health before");
 const before = await getHealth();
 
 const account = privateKeyToAccount(payerKey as `0x${string}`);
-const paidFetch = wrapFetchWithPaymentFromConfig(fetch, { schemes: [{ network: "eip155:8453", client: new ExactEvmScheme(account) }] });
+const paidFetch = wrapFetchWithPaymentFromConfig(timedFetch, { schemes: [{ network: "eip155:8453", client: new ExactEvmScheme(account) }] });
 const scanRes = await paidFetch(`${zattoUrl}/api/scan/base`, { method: "POST" });
 const scanBody = (await scanRes.json()) as { run_id?: string; error?: string };
 console.log(scanRes.status, JSON.stringify(scanBody));
@@ -43,7 +54,7 @@ let finalStatus: "done" | "failed" | null = null;
 while (Date.now() < deadline) {
   await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   await getHealth();
-  const pageRes = await fetch(`${zattoUrl}/scan/base/${runId}`);
+  const pageRes = await timedFetch(`${zattoUrl}/scan/base/${runId}`);
   const text = await pageRes.text();
   if (text.includes("Status: done")) { finalText = text; finalStatus = "done"; break; }
   if (text.includes("Status: failed")) { finalText = text; finalStatus = "failed"; break; }
