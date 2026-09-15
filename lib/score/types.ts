@@ -16,6 +16,7 @@ export interface BuyScore {
   newBuyers: { m10: number; m30: number; m60: number };
   fastShare: number | null;
   crowdRatio: number;
+  crowdRatio10: number;
   crowded: boolean;
   fillPrice: number | null;
   entryPrice: number | null;
@@ -33,7 +34,7 @@ export interface WalletScore {
   chain: string; wallet: string;
   n: number; nCrowded: number; nUncrowded: number; tokens: number;
   excluded: { capped: number; immature: number; noPrice: number };
-  newBuyersPerBuy: number | null; baselinePerBuy: number | null;
+  newBuyersPerBuy: number | null; baselinePerBuy: number | null; burstRatio: number | null;
   fastShare: { mean: number | null; contributing: number };
   delayed24h: { crowded: GroupStat; uncrowded: GroupStat };
   delayed1h: { crowded: GroupStat; uncrowded: GroupStat };
@@ -44,4 +45,10 @@ export interface WalletScore {
   returnNote: string;
   provisional: boolean;
   buys: BuyScore[];
+}
+
+export interface PooledRun {
+  buys: number; wallets: number; nCrowded: number;
+  crowded: GroupStat; uncrowded: GroupStat;
+  burst: { median: number | null; p90: number | null; max: number | null };
 }

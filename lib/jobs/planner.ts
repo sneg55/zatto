@@ -1,27 +1,34 @@
 import type { D1Like } from "../db/d1";
 import { loadBuys, walletFetchedAt } from "../db/queries";
 import type { NansenClient } from "../nansen/client";
-import { fetchScreenerTokens, fetchSmartMoneyBuyers, fetchWalletBuys, scorableCutoff } from "../nansen/endpoints";
-import { MAX_BUYS_PER_WALLET, TOP_WALLETS } from "../score/constants";
-import { DEFAULT_BUDGETS } from "./types";
+import { fetchDiscoveryTokens, fetchSmartMoneyBuyers, fetchWalletBuys, scorableCutoff } from "../nansen/endpoints";
+import { DISCOVERY_TOKENS, MAX_BUYS_PER_WALLET, TOP_WALLETS } from "../score/constants";
+import { BUY_LOAD_MULTIPLE, distinctEvents } from "../score/events";
 import type { Candidate } from "./types";
 import { bucketsFor, countMissingBuckets } from "./scoreWallet";
 
 export const WALLET_BUYS_CACHE_MS = 600_000;
+export const SCREENER_REQUESTS = 2;
+export const WALLET_FETCH_REQUESTS = 2;
 
-export interface PlanLimits { topWallets: number; planRequests: number; expired: () => boolean }
+export function planRequestsFor(topWallets: number, discoveryTokens: number): number {
+  return SCREENER_REQUESTS + discoveryTokens + topWallets * WALLET_FETCH_REQUESTS;
+}
+
+export interface PlanLimits { topWallets: number; planRequests: number; discoveryTokens: number; expired: () => boolean }
 
 export async function planJob(db: D1Like, client: NansenClient, chain: string, now: Date, requestCap: number, limits: Partial<PlanLimits> = {}): Promise<{ candidates: Candidate[]; plannedRequests: number }> {
   const topWallets = limits.topWallets ?? TOP_WALLETS;
-  const planRequests = limits.planRequests ?? DEFAULT_BUDGETS.planRequests;
+  const discoveryTokens = limits.discoveryTokens ?? DISCOVERY_TOKENS;
+  const planRequests = limits.planRequests ?? planRequestsFor(topWallets, discoveryTokens);
   const expired = limits.expired ?? (() => false);
   const start = client.requests;
   const spent = () => client.requests - start;
-  const tokenBudget = Math.max(1, planRequests - topWallets);
-  const tokens = await fetchScreenerTokens(client, chain);
+  const tokens = await fetchDiscoveryTokens(client, chain, discoveryTokens);
+  const discoveryBudget = spent() + discoveryTokens;
   const counts = new Map<string, number>();
   for (const token of tokens) {
-    if (spent() >= tokenBudget || expired()) break;
+    if (spent() >= discoveryBudget || expired()) break;
     for (const { wallet, buys } of await fetchSmartMoneyBuyers(client, chain, token, 7, now)) {
       counts.set(wallet, (counts.get(wallet) ?? 0) + buys);
     }
@@ -33,7 +40,7 @@ export async function planJob(db: D1Like, client: NansenClient, chain: string, n
     const cached = last !== null && now.getTime() - new Date(last).getTime() < WALLET_BUYS_CACHE_MS;
     if (!cached && spent() >= planRequests) break;
     const buys = cached
-      ? await loadBuys(db, chain, wallet, MAX_BUYS_PER_WALLET, scorableCutoff(now))
+      ? distinctEvents(await loadBuys(db, chain, wallet, MAX_BUYS_PER_WALLET * BUY_LOAD_MULTIPLE, scorableCutoff(now)), MAX_BUYS_PER_WALLET)
       : await fetchWalletBuys(client, db, chain, wallet, now);
     candidates.push({ wallet, buys, buckets: bucketsFor(buys) });
   }

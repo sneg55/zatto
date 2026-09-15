@@ -27,6 +27,11 @@ describe("scoreBuy", () => {
     expect(quiet.crowdRatio).toBeCloseTo(2 / 3);
     expect(quiet.crowded).toBe(false);
   });
+  it("the ten minute ratio measures the burst against the prior hour rate scaled to ten minutes", () => {
+    const s = scoreBuy({ buy, buckets: buckets(crowdedRows), closes: std });
+    expect(s.crowdRatio10).toBeCloseTo(5 / 2);
+    expect(s.crowdRatio10).toBeGreaterThan(s.crowdRatio / 2);
+  });
   it("returns use the fill price and the first trade at or after 60 s", () => {
     const s = scoreBuy({ buy, buckets: buckets(crowdedRows), closes: std });
     expect(s.fillPrice).toBe(1.0);

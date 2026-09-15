@@ -1,5 +1,5 @@
 import { MIN_GROUP, MIN_USABLE_BUYS } from "./constants";
-import type { BuyScore, GroupStat, Verdict, WalletScore } from "./types";
+import type { BuyScore, GroupStat, PooledRun, Verdict, WalletScore } from "./types";
 
 function median(xs: number[]): number | null {
   if (xs.length === 0) return null;
@@ -39,6 +39,7 @@ export function scoreWallet(chain: string, wallet: string, buys: BuyScore[]): Wa
     chain, wallet, n, nCrowded: crowded.length, nUncrowded: uncrowded.length,
     tokens: new Set(usable.map((b) => b.token)).size, excluded,
     newBuyersPerBuy: median(usable.map((b) => b.newBuyers.m60)),
+    burstRatio: median(usable.map((b) => b.crowdRatio10)),
     baselinePerBuy: median(usable.map((b) => b.baselineRate)),
     fastShare: { mean: fast.length ? fast.reduce((a, b) => a + b, 0) / fast.length : null, contributing: fast.length },
     delayed24h, delayed1h: split((b) => b.delayedReturn.h1),
@@ -57,4 +58,28 @@ export function sortLeaderboard(rows: WalletScore[]): WalletScore[] {
     || (b.newBuyersPerBuy ?? -Infinity) - (a.newBuyersPerBuy ?? -Infinity)
     || b.n - a.n
     || a.wallet.localeCompare(b.wallet));
+}
+
+export function quantile(xs: number[], q: number): number | null {
+  if (xs.length === 0) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const i = (s.length - 1) * q;
+  const lo = Math.floor(i);
+  const hi = Math.ceil(i);
+  return lo === hi ? s[lo] : s[lo] + (s[hi] - s[lo]) * (i - lo);
+}
+
+export function pooledRun(rows: WalletScore[]): PooledRun {
+  const usable = rows.flatMap((r) => r.buys.filter((b) => b.usable));
+  const crowded = usable.filter((b) => b.crowded);
+  const uncrowded = usable.filter((b) => !b.crowded);
+  const ratios = usable.map((b) => b.crowdRatio10).filter((v) => Number.isFinite(v));
+  return {
+    buys: usable.length,
+    wallets: rows.length,
+    crowded: group(crowded.map((b) => b.delayedReturn.h24)),
+    uncrowded: group(uncrowded.map((b) => b.delayedReturn.h24)),
+    nCrowded: crowded.length,
+    burst: { median: quantile(ratios, 0.5), p90: quantile(ratios, 0.9), max: ratios.length ? Math.max(...ratios) : null },
+  };
 }

@@ -1,4 +1,4 @@
-import { BASELINE_FLOOR, CROWD_RATIO, DELAYED_ENTRY_SECONDS, FAST_SECONDS, HORIZONS_MINUTES } from "./constants";
+import { BASELINE_FLOOR, BURST_FLOOR, BURST_MINUTES, CROWD_RATIO, DELAYED_ENTRY_SECONDS, FAST_SECONDS, HORIZONS_MINUTES } from "./constants";
 import type { BuyInput, BuyScore, TapeRow } from "./types";
 
 export function hourKey(iso: string): string {
@@ -34,6 +34,8 @@ export function scoreBuy({ buy, buckets, closes }: BuyInput): BuyScore {
   const newBuyers = { m10: within(600), m30: within(1800), m60: within(3600) };
   const fastShare = newBuyers.m60 === 0 ? null : within(FAST_SECONDS) / newBuyers.m60;
   const crowdRatio = newBuyers.m60 / Math.max(baselineRate, BASELINE_FLOOR);
+  const burstBaseline = Math.max((baselineRate * BURST_MINUTES) / 60, BURST_FLOOR);
+  const crowdRatio10 = within(BURST_MINUTES * 60) / burstBaseline;
 
   const own = rows.find((r) => r.trader === wallet && r.ms === t0 && r.action === "BUY");
   const closeAt = (ms: number) => closes.get(minuteKey(ms));
@@ -57,5 +59,5 @@ export function scoreBuy({ buy, buckets, closes }: BuyInput): BuyScore {
   const noPrice = entryPrice == null || leaderReturn.h24 == null || delayedReturn.h24 == null;
   const exclusion = capped ? "capped" : !mature ? "immature" : noPrice ? "no-price" : null;
 
-  return { tx: buy.tx, token: buy.token, ts: buy.ts, baselineRate, newBuyers, fastShare, crowdRatio, crowded: crowdRatio >= CROWD_RATIO, fillPrice, entryPrice, leaderReturn, delayedReturn, mature, usable: exclusion === null, exclusion };
+  return { tx: buy.tx, token: buy.token, ts: buy.ts, baselineRate, newBuyers, fastShare, crowdRatio, crowdRatio10, crowded: crowdRatio >= CROWD_RATIO, fillPrice, entryPrice, leaderReturn, delayedReturn, mature, usable: exclusion === null, exclusion };
 }

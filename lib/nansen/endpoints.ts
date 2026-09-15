@@ -2,18 +2,41 @@ import type { NansenClient } from "./client";
 import type { D1Like } from "../db/d1";
 import type { Buy } from "../score/types";
 import { isQualifyingBuy, toBuy, type ProfilerTrade } from "./quote";
-import { LOOKBACK_DAYS, MAX_BUYS_PER_WALLET, SCORABLE_AGE_MINUTES } from "../score/constants";
+import { DISCOVERY_TOKENS, FRESH_TOKEN_MAX_AGE_DAYS, LOOKBACK_DAYS, MAX_BUYS_PER_WALLET, SCORABLE_AGE_MINUTES } from "../score/constants";
+import { distinctEvents } from "../score/events";
 import { upsertBuys, setWalletFetched } from "../db/queries";
 
 interface Envelope<T> { data: T[]; pagination?: { page: number; per_page: number; is_last_page: boolean } }
 
-export async function fetchScreenerTokens(client: NansenClient, chain: string): Promise<string[]> {
+export type TokenSource = "established" | "fresh";
+
+export async function fetchScreenerTokens(client: NansenClient, chain: string, source: TokenSource = "established"): Promise<string[]> {
+  const age = source === "fresh" ? { token_age_days: { min: 0, max: FRESH_TOKEN_MAX_AGE_DAYS } } : {};
   const { data } = await client.post<Envelope<{ token_address: string }>>("token-screener", {
     chains: [chain], timeframe: "24h",
-    filters: { trader_type: "sm", include_stablecoins: false, include_native_tokens: false },
+    filters: { trader_type: "sm", include_stablecoins: false, include_native_tokens: false, ...age },
     order_by: [{ field: "buy_volume", direction: "DESC" }], pagination: { page: 1, per_page: 30 },
   });
   return data.data.map((t) => t.token_address.toLowerCase());
+}
+
+export function interleave(fresh: string[], established: string[], max: number): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; out.length < max && (i < fresh.length || i < established.length); i++) {
+    for (const token of [fresh[i], established[i]]) {
+      if (token === undefined || seen.has(token) || out.length >= max) continue;
+      seen.add(token);
+      out.push(token);
+    }
+  }
+  return out;
+}
+
+export async function fetchDiscoveryTokens(client: NansenClient, chain: string, max = DISCOVERY_TOKENS): Promise<string[]> {
+  const fresh = await fetchScreenerTokens(client, chain, "fresh");
+  const established = await fetchScreenerTokens(client, chain, "established");
+  return interleave(fresh, established, max);
 }
 
 export interface TgmTrade { block_timestamp: string; transaction_hash: string; trader_address: string; trader_address_label: string | null; action: "BUY" | "SELL"; estimated_swap_price_usd: number | null; estimated_value_usd: number | null }
@@ -53,8 +76,8 @@ async function fetchProfilerBuys(client: NansenClient, chain: string, wallet: st
 export async function fetchWalletBuys(client: NansenClient, db: D1Like, chain: string, wallet: string, now: Date, purpose: "score" | "recent" = "score"): Promise<Buy[]> {
   const from = new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000).toISOString();
   const cutoff = scorableCutoff(now);
-  const scorable = (await fetchProfilerBuys(client, chain, wallet, from, cutoff)).filter((b) => b.ts <= cutoff).slice(0, MAX_BUYS_PER_WALLET);
-  const newest = (await fetchProfilerBuys(client, chain, wallet, from, now.toISOString())).slice(0, MAX_BUYS_PER_WALLET);
+  const scorable = distinctEvents((await fetchProfilerBuys(client, chain, wallet, from, cutoff)).filter((b) => b.ts <= cutoff), MAX_BUYS_PER_WALLET);
+  const newest = distinctEvents(await fetchProfilerBuys(client, chain, wallet, from, now.toISOString()), MAX_BUYS_PER_WALLET);
   const byTx = new Map(([] as Buy[]).concat(newest, scorable).map((b) => [`${b.tx}|${b.token}`, b]));
   await upsertBuys(db, [...byTx.values()], now.toISOString());
   await setWalletFetched(db, chain, wallet.toLowerCase(), now.toISOString());

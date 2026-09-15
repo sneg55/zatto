@@ -1,4 +1,4 @@
-import type { GroupStat } from "./score/types";
+import type { GroupStat, WalletScore } from "./score/types";
 
 export const fmtPct = (x: number | null): string => x == null ? "no price" : `${x >= 0 ? "+" : ""}${(x * 100).toFixed(1)}%`;
 export const fmtGroup = (g: GroupStat): string => g.insufficient ? `insufficient (n=${g.n})` : `${fmtPct(g.median)} (n=${g.n})`;
@@ -27,3 +27,16 @@ export const fmtUsd = (x: number | null): string => {
   if (abs >= 1) return `${sign}$${abs.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
   return `${sign}$${abs.toFixed(2)}`;
 };
+
+const EXCLUSION_LABELS: Array<[keyof WalletScore["excluded"], string]> = [
+  ["capped", "token too busy to read"],
+  ["noPrice", "no settled price"],
+  ["immature", "too recent to settle"],
+];
+
+export const fmtExcluded = (excluded: WalletScore["excluded"]): string | null => {
+  const parts = EXCLUSION_LABELS.filter(([k]) => excluded[k] > 0).map(([k, label]) => `${excluded[k]} ${label}`);
+  return parts.length ? parts.join(", ") : null;
+};
+
+export const fmtRatio = (x: number | null): string => x == null ? "n/a" : `${x.toFixed(2)}x`;

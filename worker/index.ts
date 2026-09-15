@@ -18,7 +18,7 @@ const worker = {
         return;
       }
     };
-    await sweep(env.DB, { chains: ["base"], cronHoursUtc: [0, 6, 12, 18], maxAttempts: MAX_ATTEMPTS }, new Date(), trigger);
+    await sweep(env.DB, { chains: ["base"], cronHoursUtc: [0, 8, 16], maxAttempts: MAX_ATTEMPTS }, new Date(), trigger);
   },
 };
 

@@ -9,4 +9,4 @@ export interface ScanJob {
   attempts: number; lease_until: string | null; error: string | null; payment_id: string | null; payment_tx: string | null; published: number;
 }
 export interface StepBudgets { requests: number; planRequests: number; seconds: number }
-export const DEFAULT_BUDGETS: StepBudgets = { requests: 40, planRequests: 40, seconds: 20 };
+export const DEFAULT_BUDGETS: StepBudgets = { requests: 45, planRequests: 34, seconds: 45 };

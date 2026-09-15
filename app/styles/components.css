@@ -273,3 +273,15 @@ table.data a:hover {
   font-family: var(--font-ui);
   font-weight: 600;
 }
+
+.pooled {
+  margin: 0 0 32px;
+}
+
+.cell-note {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--graphite);
+  margin-top: 2px;
+}
