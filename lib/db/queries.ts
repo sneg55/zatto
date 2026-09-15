@@ -217,6 +217,11 @@ export async function expiredRunningJobs(db: D1Like, nowIso: string, maxAttempts
   return (await db.prepare("SELECT * FROM scan_jobs WHERE status IN ('settled','running') AND (lease_until IS NULL OR lease_until < ?) AND attempts < ?").bind(nowIso, maxAttempts).all<ScanJob>()).results;
 }
 
+export async function expireStrandedReservations(db: D1Like, olderThanIso: string): Promise<number> {
+  const r = await db.prepare("DELETE FROM calls WHERE status = 'reserved' AND ts < ?").bind(olderThanIso).run();
+  return r.meta.changes ?? 0;
+}
+
 export async function bumpAttempts(db: D1Like, runId: string): Promise<number> {
   await db.prepare("UPDATE scan_jobs SET attempts = attempts + 1 WHERE run_id = ?").bind(runId).run();
   const r = await db.prepare("SELECT attempts FROM scan_jobs WHERE run_id = ?").bind(runId).first<{ attempts: number }>();

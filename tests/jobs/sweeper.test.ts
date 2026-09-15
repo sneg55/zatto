@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { openTestDb } from "../helpers/d1";
-import { sweep } from "@/lib/jobs/sweeper";
+import { RESERVATION_GRACE_MS, sweep } from "@/lib/jobs/sweeper";
 import { createJob, readJob, saveJobProgress } from "@/lib/db/queries";
 import { LEASE_SECONDS, PLAN_LEASE_SECONDS } from "@/lib/jobs/leases";
 import { DEFAULT_BUDGETS } from "@/lib/jobs/types";
@@ -86,5 +86,23 @@ describe("lease length", () => {
   it("keeps the scoring lease near the step budget, so a worker that dies does not park the run", () => {
     expect(LEASE_SECONDS).toBeGreaterThan(DEFAULT_BUDGETS.seconds);
     expect(LEASE_SECONDS).toBeLessThan(PLAN_LEASE_SECONDS / 2);
+  });
+});
+
+describe("stranded credit reservations", () => {
+  it("reclaims a reservation whose worker died, and leaves a call still in flight alone", async () => {
+    const db = openTestDb();
+    const now = new Date("2026-09-15T23:20:00.000Z");
+    const dead = new Date(now.getTime() - RESERVATION_GRACE_MS - 60_000).toISOString();
+    const live = new Date(now.getTime() - 30_000).toISOString();
+    await db.prepare("INSERT INTO calls (ts, endpoint, credits, run_id, status) VALUES (?,?,?,?,?)").bind(dead, "tgm/dex-trades", 1, "r", "reserved").run();
+    await db.prepare("INSERT INTO calls (ts, endpoint, credits, run_id, status) VALUES (?,?,?,?,?)").bind(live, "tgm/dex-trades", 1, "r", "reserved").run();
+    await db.prepare("INSERT INTO calls (ts, endpoint, credits, run_id, status) VALUES (?,?,?,?,?)").bind(dead, "tgm/dex-trades", 1, "r", "ok").run();
+
+    const result = await sweep(db, { chains: [], cronHoursUtc: [], maxAttempts: 5 }, now, async () => {});
+
+    expect(result.reclaimed).toBe(1);
+    const left = await db.prepare("SELECT status, COUNT(*) c FROM calls GROUP BY status").all<{ status: string; c: number }>();
+    expect(Object.fromEntries(left.results.map((r) => [r.status, r.c]))).toEqual({ ok: 1, reserved: 1 });
   });
 });

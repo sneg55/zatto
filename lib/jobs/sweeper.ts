@@ -1,10 +1,13 @@
 import type { D1Like } from "../db/d1";
-import { bumpAttempts, createJob, deleteScratchScores, expiredRunningJobs, failJob, latestCronJobCreatedAt } from "../db/queries";
+import { bumpAttempts, createJob, deleteScratchScores, expiredRunningJobs, expireStrandedReservations, failJob, latestCronJobCreatedAt } from "../db/queries";
+
+export const RESERVATION_GRACE_MS = 600_000;
 
 export interface SweepConfig { chains: string[]; cronHoursUtc: number[]; maxAttempts: number }
 
-export async function sweep(db: D1Like, cfg: SweepConfig, now: Date, trigger: (runId: string) => Promise<void>): Promise<{ resumed: string[]; created: string | null; failed: string[] }> {
+export async function sweep(db: D1Like, cfg: SweepConfig, now: Date, trigger: (runId: string) => Promise<void>): Promise<{ resumed: string[]; created: string | null; failed: string[]; reclaimed: number }> {
   const nowIso = now.toISOString();
+  const reclaimed = await expireStrandedReservations(db, new Date(now.getTime() - RESERVATION_GRACE_MS).toISOString());
   const resumed: string[] = [];
   const failed: string[] = [];
   for (const job of await expiredRunningJobs(db, nowIso, cfg.maxAttempts)) {
@@ -29,5 +32,5 @@ export async function sweep(db: D1Like, cfg: SweepConfig, now: Date, trigger: (r
       await trigger(created);
     }
   }
-  return { resumed, created, failed };
+  return { resumed, created, failed, reclaimed };
 }
