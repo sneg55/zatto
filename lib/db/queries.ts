@@ -1,5 +1,6 @@
 import type { D1Like } from "./d1";
-import type { Buy, TapeRow } from "../score/types";
+import type { Buy, TapeRow, WalletScore } from "../score/types";
+import type { ScanJob, Candidate } from "../jobs/types";
 
 export async function countCallsToday(db: D1Like, dayStartIso: string): Promise<{ reserved: number; ok: number; failed: number }> {
   const rows = (await db.prepare(
@@ -113,4 +114,92 @@ export async function readCandleGaps(db: D1Like, chain: string, token: string, m
     for (const r of rows) out.set(r.minute, r);
   }
   return out;
+}
+
+export async function createJob(db: D1Like, p: { runId: string; chain: string; source: "cron" | "paid"; status: "created" | "settled"; paymentId?: string; now: string }): Promise<void> {
+  await db.prepare("INSERT INTO scan_jobs (run_id, chain, source, status, created_at, payment_id) VALUES (?,?,?,?,?,?)").bind(p.runId, p.chain, p.source, p.status, p.now, p.paymentId ?? null).run();
+}
+
+export async function readJob(db: D1Like, runId: string): Promise<ScanJob | null> {
+  return db.prepare("SELECT * FROM scan_jobs WHERE run_id = ?").bind(runId).first<ScanJob>();
+}
+
+export async function readJobByPayment(db: D1Like, paymentId: string): Promise<ScanJob | null> {
+  return db.prepare("SELECT * FROM scan_jobs WHERE payment_id = ?").bind(paymentId).first<ScanJob>();
+}
+
+export async function takeJobLease(db: D1Like, runId: string, nowIso: string, untilIso: string): Promise<boolean> {
+  const r = await db.prepare("UPDATE scan_jobs SET lease_until = ? WHERE run_id = ? AND status IN ('settled','running') AND (lease_until IS NULL OR lease_until < ?)").bind(untilIso, runId, nowIso).run();
+  return r.meta.changes === 1;
+}
+
+export async function releaseJobLease(db: D1Like, runId: string): Promise<void> {
+  await db.prepare("UPDATE scan_jobs SET lease_until = NULL WHERE run_id = ?").bind(runId).run();
+}
+
+export async function saveJobPlan(db: D1Like, runId: string, candidates: Candidate[], planned: number, startedAt: string): Promise<void> {
+  await db.prepare("UPDATE scan_jobs SET candidates = ?, planned_requests = ?, status = 'running', started_at = ? WHERE run_id = ?").bind(JSON.stringify(candidates), planned, startedAt, runId).run();
+}
+
+export async function saveJobProgress(db: D1Like, runId: string, cursor: number, bucketCursor: number, usedRequests: number): Promise<void> {
+  await db.prepare("UPDATE scan_jobs SET cursor = ?, bucket_cursor = ?, used_requests = ? WHERE run_id = ?").bind(cursor, bucketCursor, usedRequests, runId).run();
+}
+
+export async function publishJob(db: D1Like, runId: string, finishedAt: string, usedRequests: number): Promise<void> {
+  await db.prepare("UPDATE scan_jobs SET status = 'done', published = 1, finished_at = ?, used_requests = ?, lease_until = NULL WHERE run_id = ?").bind(finishedAt, usedRequests, runId).run();
+}
+
+export async function failJob(db: D1Like, runId: string, error: string, finishedAt: string): Promise<void> {
+  await db.prepare("UPDATE scan_jobs SET status = 'failed', error = ?, finished_at = ?, lease_until = NULL WHERE run_id = ?").bind(error, finishedAt, runId).run();
+}
+
+export async function setJobPayment(db: D1Like, runId: string, tx: string): Promise<void> {
+  await db.prepare("UPDATE scan_jobs SET status = 'settled', payment_tx = ? WHERE run_id = ?").bind(tx, runId).run();
+}
+
+export async function expiredRunningJobs(db: D1Like, nowIso: string, maxAttempts: number): Promise<ScanJob[]> {
+  return (await db.prepare("SELECT * FROM scan_jobs WHERE status IN ('settled','running') AND (lease_until IS NULL OR lease_until < ?) AND attempts < ?").bind(nowIso, maxAttempts).all<ScanJob>()).results;
+}
+
+export async function bumpAttempts(db: D1Like, runId: string): Promise<number> {
+  await db.prepare("UPDATE scan_jobs SET attempts = attempts + 1 WHERE run_id = ?").bind(runId).run();
+  const r = await db.prepare("SELECT attempts FROM scan_jobs WHERE run_id = ?").bind(runId).first<{ attempts: number }>();
+  return Number(r?.attempts ?? 0);
+}
+
+export async function latestCronJobCreatedAt(db: D1Like, chain: string): Promise<string | null> {
+  const r = await db.prepare("SELECT created_at FROM scan_jobs WHERE chain = ? AND source = 'cron' ORDER BY created_at DESC LIMIT 1").bind(chain).first<{ created_at: string }>();
+  return r?.created_at ?? null;
+}
+
+export async function latestPublishedJob(db: D1Like, chain: string): Promise<ScanJob | null> {
+  return db.prepare("SELECT * FROM scan_jobs WHERE chain = ? AND published = 1 ORDER BY finished_at DESC LIMIT 1").bind(chain).first<ScanJob>();
+}
+
+export async function writeScore(db: D1Like, s: WalletScore, runId: string, computedAt: string): Promise<void> {
+  await db.prepare("INSERT OR REPLACE INTO scores (chain, wallet, run_id, computed_at, provisional, result) VALUES (?,?,?,?,?,?)").bind(s.chain, s.wallet, runId, computedAt, s.provisional ? 1 : 0, JSON.stringify(s)).run();
+}
+
+export async function readScoresForRun(db: D1Like, chain: string, runId: string): Promise<WalletScore[]> {
+  return (await db.prepare("SELECT result FROM scores WHERE chain = ? AND run_id = ?").bind(chain, runId).all<{ result: string }>()).results.map((r) => JSON.parse(r.result) as WalletScore);
+}
+
+export async function readScore(db: D1Like, chain: string, wallet: string, runId: string | null): Promise<{ score: WalletScore; runId: string; computedAt: string } | null> {
+  const r = runId
+    ? await db.prepare("SELECT result, run_id, computed_at FROM scores WHERE chain = ? AND wallet = ? AND run_id = ?").bind(chain, wallet, runId).first<{ result: string; run_id: string; computed_at: string }>()
+    : await db.prepare("SELECT result, run_id, computed_at FROM scores WHERE chain = ? AND wallet = ? AND run_id NOT LIKE 'zatto:scored:%' ORDER BY computed_at DESC LIMIT 1").bind(chain, wallet).first<{ result: string; run_id: string; computed_at: string }>();
+  return r ? { score: JSON.parse(r.result), runId: r.run_id, computedAt: r.computed_at } : null;
+}
+
+export async function writeScratchScore(db: D1Like, chain: string, wallet: string, scratchKey: string, computedAt: string, result: unknown): Promise<void> {
+  await db.prepare("INSERT OR REPLACE INTO scores (chain, wallet, run_id, computed_at, provisional, result) VALUES (?,?,?,?,1,?)").bind(chain, wallet, scratchKey, computedAt, JSON.stringify(result)).run();
+}
+
+export async function readScratchScore(db: D1Like, chain: string, wallet: string, scratchKey: string): Promise<string | null> {
+  const r = await db.prepare("SELECT result FROM scores WHERE chain = ? AND wallet = ? AND run_id = ?").bind(chain, wallet, scratchKey).first<{ result: string }>();
+  return r?.result ?? null;
+}
+
+export async function deleteScratchScores(db: D1Like, runId: string): Promise<void> {
+  await db.prepare("DELETE FROM scores WHERE run_id LIKE ?").bind(`zatto:scored:${runId}:%`).run();
 }
