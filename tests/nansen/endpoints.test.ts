@@ -12,7 +12,7 @@ const prof = (tok: string, ts: string) => ({ chain: "base", block_timestamp: ts,
 
 const now = new Date("2026-09-15T12:00:00Z");
 const young = ["2026-09-15T11:00:00Z", "2026-09-15T02:00:00Z", "2026-09-14T14:00:00Z"];
-const mature = Array.from({ length: 12 }, (_, i) => `2026-09-${String(14 - i).padStart(2, "0")}T09:00:00Z`);
+const mature = Array.from({ length: 12 }, (_, i) => `2026-09-${String(13 - i).padStart(2, "0")}T09:00:00Z`);
 
 function client(db: ReturnType<typeof openTestDb>) {
   const f = fetchStub((_url, init) => {
@@ -24,8 +24,8 @@ function client(db: ReturnType<typeof openTestDb>) {
 }
 
 describe("fetchWalletBuys maturity window", () => {
-  it("the cutoff is 24 hours and 15 minutes before now", () => {
-    expect(scorableCutoff(now)).toBe("2026-09-14T11:45:00.000Z");
+  it("the cutoff is 48 hours before now", () => {
+    expect(scorableCutoff(now)).toBe("2026-09-13T12:00:00.000Z");
   });
 
   it("scoring requests date.to at the maturity cutoff, not now, and gets a full cohort of mature buys", async () => {
@@ -34,7 +34,7 @@ describe("fetchWalletBuys maturity window", () => {
     const buys = await fetchWalletBuys(c, db, "base", W, now);
     expect(buys.length).toBe(MAX_BUYS_PER_WALLET);
     expect(buys.every((b) => b.ts <= scorableCutoff(now))).toBe(true);
-    expect(buys[0].ts).toBe("2026-09-14T09:00:00.000Z");
+    expect(buys[0].ts).toBe("2026-09-13T09:00:00.000Z");
     const scoreCallBody = JSON.parse(String(f.calls[0].init.body)) as { date: { to: string } };
     expect(scoreCallBody.date.to).toBe(scorableCutoff(now));
   });

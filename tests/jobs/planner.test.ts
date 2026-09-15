@@ -17,7 +17,7 @@ describe("planJob", () => {
       if (url.endsWith("tgm/dex-trades")) return { status: 200, body: { data: [trade("0xA"), trade("0xA", "2026-09-14T11:00:00Z"), trade("0xB")], pagination: { page: 1, per_page: 1000, is_last_page: true } } };
       if (url.endsWith("profiler/dex-trades")) {
         const heavy = body.address === "0xa";
-        const rows = heavy ? Array.from({ length: 20 }, (_, i) => prof("0xt" + i, `2026-09-1${i % 5}T0${i % 9}:00:00Z`)) : [prof("0xt1", "2026-09-14T10:00:00Z")];
+        const rows = heavy ? Array.from({ length: 20 }, (_, i) => prof("0xt" + i, `2026-09-1${i % 5}T0${i % 9}:00:00Z`)) : [prof("0xt1", "2026-09-10T10:00:00Z")];
         return { status: 200, body: { data: rows, pagination: { page: 1, per_page: 100, is_last_page: true } } };
       }
       throw new Error("unexpected " + url);
