@@ -12,7 +12,7 @@ import { minutesNeeded } from "./scoreWallet";
 import type { Candidate, StepBudgets } from "./types";
 import { LEASE_SECONDS } from "./leases";
 
-const RUN_REQUEST_CAP = 800;
+const RUN_REQUEST_CAP = 3000;
 
 function scratchKey(runId: string, wallet: string): string {
   return `zatto:scored:${runId}:${wallet}`;

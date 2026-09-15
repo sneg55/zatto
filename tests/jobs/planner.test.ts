@@ -3,6 +3,7 @@ import { openTestDb } from "../helpers/d1";
 import { fetchStub } from "../helpers/fetchStub";
 import { NansenClient } from "@/lib/nansen/client";
 import { planJob } from "@/lib/jobs/planner";
+import { DISCOVERY_TOKENS, MAX_BUYS_PER_WALLET, TOP_WALLETS } from "@/lib/score/constants";
 
 const now = new Date("2026-09-15T12:00:00Z");
 const trade = (who: string, ts = "2026-09-14T10:00:00Z") => ({ block_timestamp: ts, transaction_hash: "0x" + who + ts, trader_address: who, trader_address_label: "Smart Trader", action: "BUY", estimated_swap_price_usd: 1, estimated_value_usd: 10 });
@@ -25,9 +26,10 @@ describe("planJob", () => {
     const client = new NansenClient({ db, apiKey: "k", fetch: f, now: () => now, budget: 3000, sleep: async () => {} });
     const full = await planJob(db, client, "base", now, 10_000);
     expect(full.candidates.map((c) => c.wallet)).toEqual(["0xa", "0xb"]);
-    expect(full.candidates[0].buys.length).toBe(8);
-    expect(full.candidates[0].buckets.length).toBe(24);
-    expect(full.plannedRequests).toBe(8 + 24 * 2 + 8 + 3 * 2 + 1);
+    const heavy = Math.min(MAX_BUYS_PER_WALLET, 16);
+    expect(full.candidates[0].buys.length).toBe(heavy);
+    expect(full.candidates[0].buckets.length).toBe(heavy * 3);
+    expect(full.plannedRequests).toBe(8 + heavy * 3 * 2 + heavy + 3 * 2 + 1);
     const capped = await planJob(db, client, "base", now, 20);
     expect(capped.candidates.find((c) => c.wallet === "0xa")?.dropped).toMatch(/cap/);
     expect(capped.candidates.find((c) => c.wallet === "0xb")?.dropped).toBeUndefined();
@@ -62,14 +64,16 @@ describe("planJob", () => {
       throw new Error("unexpected " + url);
     });
     const client = new NansenClient({ db, apiKey: "k", fetch: f, now: () => now, budget: 3000, sleep: async () => {} });
+    const scored = Math.min(wallets.length, TOP_WALLETS);
+    const planCost = 2 + DISCOVERY_TOKENS + scored * 2;
     const first = await planJob(db, client, "base", now, 10_000);
-    expect(client.requests).toBe(2 + 12 + 10 * 2);
-    expect(first.candidates.length).toBe(10);
+    expect(client.requests).toBe(planCost);
+    expect(first.candidates.length).toBe(scored);
     expect(first.candidates.every((c) => c.buys.length === 1)).toBe(true);
 
     const replan = await planJob(db, client, "base", now, 10_000);
-    expect(client.requests - 34).toBe(2 + 12);
-    expect(replan.candidates.length).toBe(10);
+    expect(client.requests - planCost).toBe(2 + DISCOVERY_TOKENS);
+    expect(replan.candidates.length).toBe(scored);
     expect(replan.candidates.every((c) => c.buys.length === 1)).toBe(true);
   });
 

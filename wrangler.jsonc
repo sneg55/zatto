@@ -9,8 +9,8 @@
   "d1_databases": [{ "binding": "DB", "database_name": "zatto", "database_id": "3ea55fb8-17fb-4cbe-bd8f-fe904df9c3d2", "migrations_dir": "migrations" }],
   "triggers": { "crons": ["*/5 * * * *"] },
   "vars": {
-    "DAILY_CREDIT_BUDGET": "3000",
-    "RUN_REQUEST_CAP": "800",
+    "DAILY_CREDIT_BUDGET": "6000",
+    "RUN_REQUEST_CAP": "3000",
     "LIVE_WALLET_PER_IP_PER_HOUR": "10",
     "LIVE_WALLET_CONCURRENCY": "2",
     "PUBLIC_BASE_URL": "https://zatto.nsawinyh.workers.dev"
