@@ -24,7 +24,10 @@ export default function Home() {
             </p>
           </li>
           <li className="card">
-            <p>Fast arrivals: the share of those buyers arriving within 20 seconds.</p>
+            <p>
+              Burst: new buyers in the 10 minutes after the buy, against the token&apos;s prior-hour rate scaled to
+              the same 10 minutes. Fast arrivals: the share arriving within 20 seconds.
+            </p>
           </li>
           <li className="card">
             <p>
@@ -43,8 +46,9 @@ export default function Home() {
           <span className="tag tag-thin">THIN</span>
         </p>
         <p>
-          CROWDED when more than half of usable buys drew at least three times the prior-hour buyer rate. QUIET
-          otherwise. THIN under five usable buys. The return note is stated only when both groups have at least
+          CROWDED when more than half of scored buys drew at least three times the prior-hour buyer rate. QUIET
+          otherwise. THIN under four scored buys. A wallet&apos;s repeated swaps into one token inside an hour count
+          as one buy. The return comparison is pooled across the run and stated only when both groups hold at least
           three mature buys.
         </p>
       </section>

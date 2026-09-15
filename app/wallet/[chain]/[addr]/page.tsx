@@ -81,7 +81,7 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
                 <tr>
                   <th>Time</th><th>Token</th><th className="num">Baseline/h</th>
                   <th className="num">New 10m</th><th className="num">New 30m</th><th className="num">New 60m</th>
-                  <th className="num">Fast</th><th className="num">Ratio</th>
+                  <th className="num">Fast</th><th className="num">Burst 10m</th><th className="num">Ratio 60m</th>
                   <th className="num">Leader 24h</th><th className="num">Delayed 24h</th>
                   <th>State</th><th>Tx</th>
                 </tr>
@@ -96,7 +96,8 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
                     <td className="num">{b.newBuyers.m30}</td>
                     <td className="num">{b.newBuyers.m60}</td>
                     <td className="num">{b.fastShare == null ? "n/a" : fmtPct(b.fastShare)}</td>
-                    <td className="num">{b.crowdRatio.toFixed(2)}{b.crowded ? <span className="pill-note">crowded</span> : null}</td>
+                    <td className="num">{b.crowdRatio10.toFixed(2)}x</td>
+                    <td className="num">{b.crowdRatio.toFixed(2)}x{b.crowded ? <span className="pill-note">crowded</span> : null}</td>
                     <td className="num"><Delta value={b.leaderReturn.h24} /></td>
                     <td className="num"><Delta value={b.delayedReturn.h24} /></td>
                     <td>{b.usable ? "usable" : b.exclusion}</td>
