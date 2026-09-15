@@ -1,0 +1,13 @@
+export const CROWD_RATIO = 3;
+export const BASELINE_FLOOR = 3;
+export const FAST_SECONDS = 20;
+export const DELAYED_ENTRY_SECONDS = 60;
+export const MIN_USABLE_BUYS = 5;
+export const MIN_GROUP = 3;
+export const LOOKBACK_DAYS = 30;
+export const MAX_BUYS_PER_WALLET = 20;
+export const MATURITY_MINUTES = 15;
+export const TAPE_PAGE_CAP = 3;
+export const TAPE_BYTES_CAP = 1_500_000;
+export const WINDOWS_MINUTES = [10, 30, 60] as const;
+export const HORIZONS_MINUTES = { h1: 60, h24: 1440 } as const;
