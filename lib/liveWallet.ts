@@ -4,15 +4,17 @@ import { scoreOneWallet } from "./jobs/scoreWallet";
 import { fetchWalletBuys, scorableCutoff } from "./nansen/endpoints";
 import { BudgetExhaustedError } from "./nansen/credits";
 import { MAX_BUYS_PER_WALLET } from "./score/constants";
+import { BUY_LOAD_MULTIPLE, distinctEvents } from "./score/events";
+import { isAddress, isSupportedChain } from "./chains";
 import { LIVE_MAX_THROTTLE_MS } from "./nansen/client";
 import { nansenClient, type AppContext } from "./http/context";
 
 export const LIVE_REQUEST_CAP = 120;
-const ADDR = /^0x[0-9a-f]{40}$/;
 
 export async function handleLiveWallet(ctx: AppContext, chain: string, addr: string, ip: string): Promise<Response> {
   const wallet = addr.toLowerCase();
-  if (chain !== "base" || !ADDR.test(wallet)) return Response.json({ error: "unknown chain or malformed address" }, { status: 400 });
+  if (!isSupportedChain(chain)) return Response.json({ error: `Zatto does not scan ${chain}` }, { status: 400 });
+  if (!isAddress(wallet)) return Response.json({ error: "that is not a wallet address" }, { status: 400 });
   const now = ctx.now();
   const cached = await readScore(ctx.db, chain, wallet, null);
   const fresh = cached && now.getTime() - new Date(cached.computedAt).getTime() < 3_600_000;
@@ -26,7 +28,9 @@ export async function handleLiveWallet(ctx: AppContext, chain: string, addr: str
   const client = nansenClient(ctx, runId, LIVE_MAX_THROTTLE_MS);
   try {
     const last = await walletFetchedAt(ctx.db, chain, wallet);
-    const buys = last && now.getTime() - new Date(last).getTime() < 600_000 ? await loadBuys(ctx.db, chain, wallet, MAX_BUYS_PER_WALLET, scorableCutoff(now)) : await fetchWalletBuys(client, ctx.db, chain, wallet, now);
+    const buys = last && now.getTime() - new Date(last).getTime() < 600_000
+      ? distinctEvents(await loadBuys(ctx.db, chain, wallet, MAX_BUYS_PER_WALLET * BUY_LOAD_MULTIPLE, scorableCutoff(now)), MAX_BUYS_PER_WALLET)
+      : await fetchWalletBuys(client, ctx.db, chain, wallet, now);
     const { score, partial } = await scoreOneWallet(ctx.db, client, chain, wallet, buys, now, LIVE_REQUEST_CAP);
     await writeScore(ctx.db, score, runId, now.toISOString());
     return Response.json({ score, runId, computedAt: now.toISOString(), stale: false, partial });

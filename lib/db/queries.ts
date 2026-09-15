@@ -50,6 +50,32 @@ export async function upsertBuys(db: D1Like, buys: Buy[], fetchedAt: string): Pr
   ).bind(b.chain, b.wallet, b.token, b.tx, b.ts, b.usd, b.price, fetchedAt)));
 }
 
+export async function upsertTokenNames(db: D1Like, chain: string, names: Array<{ token: string; symbol: string }>, seenAt: string): Promise<void> {
+  const unique = new Map(names.filter((n) => n.symbol).map((n) => [n.token.toLowerCase(), n.symbol]));
+  if (unique.size === 0) return;
+  await db.batch([...unique].map(([token, symbol]) => db.prepare(
+    "INSERT OR REPLACE INTO token_names (chain, token, symbol, seen_at) VALUES (?,?,?,?)"
+  ).bind(chain, token, symbol, seenAt)));
+}
+
+export async function readTokenNames(db: D1Like, chain: string, tokens: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(tokens.map((t) => t.toLowerCase()))];
+  if (unique.length === 0) return new Map();
+  const out = new Map<string, string>();
+  for (let i = 0; i < unique.length; i += 50) {
+    const slice = unique.slice(i, i + 50);
+    const rows = await db.prepare(
+      `SELECT token, symbol FROM token_names WHERE chain = ? AND token IN (${slice.map(() => "?").join(",")})`
+    ).bind(chain, ...slice).all<{ token: string; symbol: string }>();
+    for (const r of rows.results) out.set(r.token, r.symbol);
+  }
+  return out;
+}
+
+export async function publishedJobs(db: D1Like, chain: string, limit: number): Promise<ScanJob[]> {
+  return (await db.prepare("SELECT * FROM scan_jobs WHERE chain = ? AND published = 1 ORDER BY finished_at DESC LIMIT ?").bind(chain, limit).all<ScanJob>()).results;
+}
+
 export async function setWalletFetched(db: D1Like, chain: string, wallet: string, at: string): Promise<void> {
   await db.prepare("INSERT OR REPLACE INTO wallet_fetch (chain, wallet, last_fetched) VALUES (?,?,?)").bind(chain, wallet, at).run();
 }

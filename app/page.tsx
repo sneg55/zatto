@@ -66,7 +66,7 @@ export default async function Home() {
       </section>
 
       <section className="section" id="method">
-        <h2 className="display-sub">What it measures</h2>
+        <h2 className="display-sub">How it measures</h2>
         <ul className="card-list">
           <li className="card">
             <p>

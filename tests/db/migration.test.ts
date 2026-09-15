@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { openTestDb } from "../helpers/d1";
+import { readTokenNames, upsertTokenNames } from "@/lib/db/queries";
 
 describe("migration", () => {
   it("creates every table in spec 4", async () => {
@@ -16,3 +17,18 @@ describe("migration", () => {
     await expect(ins("r2")).rejects.toThrow();
   });
 });
+
+describe("token names", () => {
+  it("stores one symbol per token and reads back only what it has", async () => {
+    const db = openTestDb();
+    await upsertTokenNames(db, "base", [
+      { token: "0xAAA", symbol: "LOTTO" },
+      { token: "0xaaa", symbol: "LOTTO" },
+      { token: "0xbbb", symbol: "" },
+    ], "2026-09-15T00:00:00.000Z");
+    const names = await readTokenNames(db, "base", ["0xAAA", "0xbbb", "0xccc"]);
+    expect(names.get("0xaaa")).toBe("LOTTO");
+    expect(names.has("0xbbb")).toBe(false);
+    expect(names.has("0xccc")).toBe(false);
+  });
+})

@@ -2,13 +2,24 @@
 import { useEffect, useState } from "react";
 import { StatusTag } from "@/app/_components/Tag";
 import { fmtDateTime, fmtUsd, shortAddr } from "@/lib/format";
+import { explorerToken, explorerTx } from "@/lib/chains";
 
-type Recent = { newest: { token: string; ts: string; tx: string } | null; buyers: Array<{ address: string; secondsAfter: number; usd: number | null; tx: string }>; status: "final" | "provisional" | "none"; reason?: string; stale?: boolean };
+type Recent = {
+  newest: { token: string; symbol?: string | null; ts: string; tx: string } | null;
+  buyers: Array<{ address: string; secondsAfter: number; usd: number | null; tx: string }>;
+  totalBuyers?: number;
+  shown?: number;
+  status: "final" | "provisional" | "none";
+  reason?: string;
+  stale?: boolean;
+};
 
 export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }) {
   const [data, setData] = useState<Recent | null>(null);
+  const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const load = async () => {
+    setBusy(true);
     try {
       const r = await fetch(`/api/recent/${chain}/${wallet}`);
       const j = await r.json().catch(() => null) as Recent | null;
@@ -17,6 +28,8 @@ export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }
       setData(j);
     } catch {
       setData({ newest: null, buyers: [], status: "none", reason: "the request did not complete, try again" });
+    } finally {
+      setBusy(false);
     }
   };
   useEffect(() => { void load(); }, []);
@@ -39,18 +52,30 @@ export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }
     );
   }
 
+  const total = data.totalBuyers ?? data.buyers.length;
+  const capped = total > data.buyers.length;
+
   return (
     <section>
       <div className="meta-block">
         <div className="meta-item">
           <span className="meta-label">Newest buy</span>
           <span className="meta-value">
-            {shortAddr(data.newest.token)} <span className="pill-note"><a href={`https://basescan.org/tx/${data.newest.tx}`}>tx</a></span>
+            <a href={explorerToken(chain, data.newest.token)} target="_blank" rel="noopener noreferrer">
+              {data.newest.symbol ?? shortAddr(data.newest.token)}
+            </a>
+            <span className="pill-note">
+              <a href={explorerTx(chain, data.newest.tx)} target="_blank" rel="noopener noreferrer">tx</a>
+            </span>
           </span>
         </div>
         <div className="meta-item">
           <span className="meta-label">At</span>
           <span className="meta-value muted">{fmtDateTime(data.newest.ts)}</span>
+        </div>
+        <div className="meta-item">
+          <span className="meta-label">Buyers after it</span>
+          <span className="meta-value">{total}</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Bucket status</span>
@@ -62,8 +87,15 @@ export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }
       {note ? <p className="status-note">{note}</p> : null}
 
       <p className="link-row">
-        <button className="btn" onClick={() => void load()}>Refresh</button>
+        <button className="btn" onClick={() => void load()} disabled={busy}>{busy ? "Refreshing" : "Refresh"}</button>
+        {busy ? <span className="status-note" style={{ marginTop: 0 }}>Reading the tape around the newest buy.</span> : null}
       </p>
+
+      {capped ? (
+        <p className="foot-note">
+          Showing the first {data.buyers.length} arrivals of {total}, ordered by how soon they followed.
+        </p>
+      ) : null}
 
       <div className="table-wrap">
         <table className="data">
@@ -75,10 +107,10 @@ export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }
               <tr><td colSpan={4} className="row-muted">No qualifying buyers found yet.</td></tr>
             ) : data.buyers.map((b) => (
               <tr key={b.tx}>
-                <td className="wallet-addr">{shortAddr(b.address)}</td>
-                <td className="num">{b.secondsAfter}</td>
-                <td className="num">{fmtUsd(b.usd)}</td>
-                <td><a href={`https://basescan.org/tx/${b.tx}`}>tx</a></td>
+                <td data-label="Buyer" className="wallet-addr">{shortAddr(b.address)}</td>
+                <td data-label="Seconds after" className="num">{b.secondsAfter}</td>
+                <td data-label="USD" className="num">{fmtUsd(b.usd)}</td>
+                <td data-label="Tx"><a href={explorerTx(chain, b.tx)} target="_blank" rel="noopener noreferrer">tx</a></td>
               </tr>
             ))}
           </tbody>

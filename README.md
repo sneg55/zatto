@@ -88,6 +88,8 @@ Pay it with a funded Base private key:
 PAYER_KEY=0x... npm run pay -- https://<your-host>/api/scan/base
 ```
 
+The scan page carries the payment terms, the endpoint and the exact command. Payment itself is signed outside the browser: Zatto never holds a key and there is no wallet connector in the UI.
+
 `scripts/pay.ts` is a small, public script on `@x402/fetch` and `@x402/evm`. It signs the payment with `PAYER_KEY` and retries the request. No dependency on private code.
 
 A settled job that later fails (step limit, a Nansen error, budget exhaustion) is shown on its scan page as failed, with the reason and the settlement transaction. Failed paid runs are refunded manually by the operator on request, with that transaction as the reference. Nothing about a refund is automatic.

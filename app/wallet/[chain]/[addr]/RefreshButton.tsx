@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function RefreshButton({ chain, wallet }: { chain: string; wallet: string }) {
+export function RefreshButton({ chain, wallet, stale }: { chain: string; wallet: string; stale: boolean }) {
   const [state, setState] = useState<string>("");
   const router = useRouter();
   return (
@@ -27,9 +27,10 @@ export function RefreshButton({ chain, wallet }: { chain: string; wallet: string
           }
         }}
       >
-        Refresh live
+        {state === "running" ? "Reading the live API" : "Refresh live"}
       </button>
-      {state ? <p className="status-note">{state}</p> : null}
+      {state && state !== "running" ? <p className="status-note">{state}</p> : null}
+      {!state && !stale ? <p className="status-note">This snapshot is under an hour old. Refreshing re-reads it from the Nansen API.</p> : null}
     </div>
   );
 }

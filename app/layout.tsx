@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <Link href="/" className="wordmark">Zatto</Link>
             <nav className="site-nav">
               <Link href="/scan/base">Base leaderboard</Link>
-              <Link href="/#method">Method</Link>
+              <Link href="/#method">How it measures</Link>
             </nav>
           </div>
         </header>
@@ -29,7 +29,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <footer className="site-footer">
           <div className="shell site-footer-inner">
             <span className="footer-note">Zatto reads Base through the Nansen API. Nothing here is advice.</span>
-            <a href="https://nansen.ai">Powered by Nansen API</a>
+            <span className="footer-links">
+              <a href="https://github.com/sneg55/zatto" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
+              <a href="https://nansen.ai" target="_blank" rel="noopener noreferrer">Powered by Nansen API</a>
+            </span>
           </div>
         </footer>
       </body>
