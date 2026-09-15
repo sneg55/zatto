@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { StatusTag } from "@/app/_components/Tag";
-import { shortAddr } from "@/lib/format";
+import { fmtDateTime, fmtUsd, shortAddr } from "@/lib/format";
 
 type Recent = { newest: { token: string; ts: string; tx: string } | null; buyers: Array<{ address: string; secondsAfter: number; usd: number | null; tx: string }>; status: "final" | "provisional" | "none"; reason?: string; stale?: boolean };
 
@@ -50,7 +50,7 @@ export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }
         </div>
         <div className="meta-item">
           <span className="meta-label">At</span>
-          <span className="meta-value muted">{data.newest.ts}</span>
+          <span className="meta-value muted">{fmtDateTime(data.newest.ts)}</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Bucket status</span>
@@ -77,7 +77,7 @@ export function RecentPanel({ chain, wallet }: { chain: string; wallet: string }
               <tr key={b.tx}>
                 <td className="wallet-addr">{shortAddr(b.address)}</td>
                 <td className="num">{b.secondsAfter}</td>
-                <td className="num">{b.usd ?? ""}</td>
+                <td className="num">{fmtUsd(b.usd)}</td>
                 <td><a href={`https://basescan.org/tx/${b.tx}`}>tx</a></td>
               </tr>
             ))}

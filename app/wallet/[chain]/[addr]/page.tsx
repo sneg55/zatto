@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db/d1";
 import { readScore } from "@/lib/db/queries";
-import { fmtNum, fmtPct, shortAddr } from "@/lib/format";
+import { fmtDateTime, fmtNum, fmtPct, shortAddr } from "@/lib/format";
 import { RefreshButton } from "./RefreshButton";
 import { VerdictTag } from "@/app/_components/Tag";
 import { Delta, GroupDelta } from "@/app/_components/Delta";
@@ -34,7 +34,7 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
             </div>
             <div className="meta-item">
               <span className="meta-label">Snapshot</span>
-              <span className="meta-value muted">{snap.computedAt}</span>
+              <span className="meta-value muted">{fmtDateTime(snap.computedAt)}</span>
             </div>
             <div className="meta-item">
               <span className="meta-label">Run</span>
@@ -52,7 +52,7 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
               <span className="meta-label">Fast arrivals</span>
               <span className="meta-value">{snap.score.fastShare.mean == null ? "n/a" : fmtPct(snap.score.fastShare.mean)}</span>
             </div>
-            <div className="meta-item">
+            <div className="meta-item meta-item-wide">
               <span className="meta-label">Excluded</span>
               <span className="meta-value muted">
                 capped {snap.score.excluded.capped}, immature {snap.score.excluded.immature}, no price {snap.score.excluded.noPrice}
@@ -89,7 +89,7 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
               <tbody>
                 {snap.score.buys.map((b) => (
                   <tr key={b.tx} className={b.usable ? undefined : "row-muted"}>
-                    <td>{b.ts}</td>
+                    <td>{fmtDateTime(b.ts)}</td>
                     <td className="wallet-addr">{shortAddr(b.token)}</td>
                     <td className="num">{b.baselineRate}</td>
                     <td className="num">{b.newBuyers.m10}</td>

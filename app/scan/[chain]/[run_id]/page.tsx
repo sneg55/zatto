@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getDb } from "@/lib/db/d1";
 import { readJob, readScoresForRun } from "@/lib/db/queries";
 import { sortLeaderboard } from "@/lib/score/perWallet";
-import { fmtNum, fmtPct, shortAddr } from "@/lib/format";
+import { fmtDateTime, fmtNum, fmtPct, shortAddr } from "@/lib/format";
 import type { Candidate } from "@/lib/jobs/types";
 import { VerdictTag, StatusTag } from "@/app/_components/Tag";
 import { GroupDelta } from "@/app/_components/Delta";
@@ -51,11 +51,11 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
         </div>
         <div className="meta-item">
           <span className="meta-label">Started</span>
-          <span className="meta-value muted">{job.started_at ?? "not yet"}</span>
+          <span className="meta-value muted">{job.started_at ? fmtDateTime(job.started_at) : "not yet"}</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Finished</span>
-          <span className="meta-value muted">{job.finished_at ?? "not yet"}</span>
+          <span className="meta-value muted">{job.finished_at ? fmtDateTime(job.finished_at) : "not yet"}</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Requests used</span>
