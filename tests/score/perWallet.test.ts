@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pooledRun, scoreWallet, sortLeaderboard } from "@/lib/score/perWallet";
+import { clusters, pooledRun, scoreWallet, sortLeaderboard } from "@/lib/score/perWallet";
 import type { BuyScore } from "@/lib/score/types";
 
 function mk(p: Partial<BuyScore> & { crowded: boolean; d24?: number | null }): BuyScore {
@@ -72,5 +72,18 @@ describe("pooledRun", () => {
     const pooled = pooledRun(rows);
     expect(pooled.burst.median).toBeCloseTo(2.5);
     expect(pooled.burst.max).toBe(9);
+  });
+});
+
+describe("clusters", () => {
+  it("names wallets whose scored buys are the same token minutes", () => {
+    const shape = [mk({ crowded: true, token: "0xa", ts: "2026-09-11T20:55:00.000Z" }), mk({ crowded: false, token: "0xb", ts: "2026-09-12T20:47:00.000Z" })];
+    const a = scoreWallet("base", "0xa", shape);
+    const b = scoreWallet("base", "0xb", shape);
+    const lone = scoreWallet("base", "0xc", [mk({ crowded: false, token: "0xz", ts: "2026-09-13T01:00:00.000Z" })]);
+    const found = clusters([a, b, lone]);
+    expect(found.get("0xa")).toBe(2);
+    expect(found.get("0xb")).toBe(2);
+    expect(found.has("0xc")).toBe(false);
   });
 });

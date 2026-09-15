@@ -1,20 +1,71 @@
 import Link from "next/link";
+import { getDb } from "@/lib/db/d1";
+import { latestPublishedJob, readScoresForRun } from "@/lib/db/queries";
+import { pooledRun } from "@/lib/score/perWallet";
+import { fmtDateTime, fmtRatio } from "@/lib/format";
+import { Delta } from "@/app/_components/Delta";
+import { CROWD_RATIO } from "@/lib/score/constants";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+async function latest() {
+  const db = getDb();
+  const job = await latestPublishedJob(db, "base");
+  if (!job) return null;
+  const rows = await readScoresForRun(db, "base", job.run_id);
+  if (rows.length === 0) return null;
+  return { job, pooled: pooledRun(rows) };
+}
+
+export default async function Home() {
+  const run = await latest();
+  const comparable = run !== null && !run.pooled.crowded.insufficient && !run.pooled.uncrowded.insufficient;
+
   return (
     <main>
-      <section className="section" style={{ paddingTop: 8 }}>
-        <h1 className="display-hero">Zatto</h1>
-        <p className="lede">
-          Point it at a Smart Money wallet and it tells you how many new buyers show up after it buys, how fast, and
-          what buying after it would have returned.
-        </p>
-        <p className="link-row" style={{ marginTop: 24 }}>
-          <Link href="/scan/base" className="btn">Base leaderboard</Link>
-        </p>
+      <section className="hero">
+        <div className="hero-copy">
+          <h1 className="display-hero">Who gets copied</h1>
+          <p className="lede">
+            Point Zatto at a Smart Money wallet and it tells you how many new buyers show up after it buys, how
+            fast they arrive, and what buying one minute behind it would have returned.
+          </p>
+          <p className="link-row" style={{ marginTop: 28 }}>
+            <Link href="/scan/base" className="btn">Base leaderboard</Link>
+            <Link href="#method">How it measures</Link>
+          </p>
+        </div>
+
+        {run ? (
+          <aside className="hero-panel">
+            <p className="eyebrow">Latest run</p>
+            <p className="hero-panel-figure">{fmtRatio(run.pooled.burst.p90)}</p>
+            <p className="hero-panel-label">
+              burst at the 90th percentile of {run.pooled.buys} scored buys, highest {fmtRatio(run.pooled.burst.max)}
+            </p>
+            {comparable ? (
+              <p className="hero-panel-note">
+                Entering a minute after a crowded buy returned <Delta value={run.pooled.crowded.median} /> at 24
+                hours, against <Delta value={run.pooled.uncrowded.median} /> after a quiet one. That is{" "}
+                {run.pooled.crowded.n} crowded buys over {run.pooled.crowdedEvents} entries on{" "}
+                {run.pooled.crowdedTokens} {run.pooled.crowdedTokens === 1 ? "token" : "tokens"}, against{" "}
+                {run.pooled.uncrowded.n} quiet ones.
+              </p>
+            ) : (
+              <p className="hero-panel-note">
+                {run.pooled.nCrowded} of {run.pooled.buys} scored buys cleared {CROWD_RATIO}x the token&apos;s
+                prior-hour buyer rate.
+              </p>
+            )}
+            <p className="hero-panel-meta">
+              <Link href={`/scan/base/${run.job.run_id}`}>{run.job.run_id}</Link>
+              {run.job.finished_at ? `, ${fmtDateTime(run.job.finished_at)}` : null}
+            </p>
+          </aside>
+        ) : null}
       </section>
 
-      <section className="section">
+      <section className="section" id="method">
         <h2 className="display-sub">What it measures</h2>
         <ul className="card-list">
           <li className="card">
@@ -25,8 +76,8 @@ export default function Home() {
           </li>
           <li className="card">
             <p>
-              Burst: new buyers in the 10 minutes after the buy, against the token&apos;s prior-hour rate scaled to
-              the same 10 minutes. Fast arrivals: the share arriving within 20 seconds.
+              Burst: new buyers in the 10 minutes after the buy, against that prior-hour rate scaled to the same 10
+              minutes. Fast arrivals: the share arriving within 20 seconds.
             </p>
           </li>
           <li className="card">
@@ -38,18 +89,18 @@ export default function Home() {
         </ul>
       </section>
 
-      <section className="section section-band" style={{ borderRadius: "var(--radius)", paddingInline: 24 }}>
+      <section className="section section-band" style={{ borderRadius: "var(--radius)", paddingInline: 28 }}>
         <h2 className="display-sub">Verdicts</h2>
         <p className="link-row" style={{ marginBottom: 16 }}>
           <span className="tag tag-crowded">CROWDED</span>
           <span className="tag tag-quiet">QUIET</span>
           <span className="tag tag-thin">THIN</span>
         </p>
-        <p>
-          CROWDED when more than half of scored buys drew at least three times the prior-hour buyer rate. QUIET
-          otherwise. THIN under four scored buys. A wallet&apos;s repeated swaps into one token inside an hour count
-          as one buy. The return comparison is pooled across the run and stated only when both groups hold at least
-          three mature buys.
+        <p style={{ maxWidth: "68ch" }}>
+          CROWDED when more than half of scored buys drew at least {CROWD_RATIO} times the token&apos;s prior-hour
+          buyer rate in the 10 minutes after the buy. QUIET otherwise. THIN under four scored buys. A wallet&apos;s
+          repeated swaps into one token inside an hour count as one buy. The return comparison is pooled across the
+          run and stated only when both groups hold at least three mature buys.
         </p>
       </section>
     </main>

@@ -31,3 +31,11 @@ export function closes(entries: Array<[minuteOffset: number, close: number]>, fi
   for (const [off, close] of entries) m.set(new Date(T0 - (T0 % 60000) + off * 60000).toISOString().slice(0, 16), { close, final });
   return m;
 }
+
+export const burstRows: TapeRow[] = [
+  row(-3000, "0xprior1"), row(-1200, "0xprior2"), row(-30, "0xprior3"),
+  row(0, LEADER, "BUY", 1.0),
+  row(3, "0xcopy1", "BUY", 1.02), row(6, "0xcopy2", "BUY", 1.02), row(9, "0xcopy3", "BUY", 1.03),
+  row(15, "0xcopy4", "BUY", 1.03), row(40, "0xcopy5", "BUY", 1.04), row(120, "0xcopy6", "BUY", 1.05),
+  row(480, "0xcopy7", "BUY", 1.06),
+];

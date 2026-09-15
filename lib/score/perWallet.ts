@@ -74,12 +74,32 @@ export function pooledRun(rows: WalletScore[]): PooledRun {
   const crowded = usable.filter((b) => b.crowded);
   const uncrowded = usable.filter((b) => !b.crowded);
   const ratios = usable.map((b) => b.crowdRatio10).filter((v) => Number.isFinite(v));
+  const events = (xs: BuyScore[]) => new Set(xs.map((b) => `${b.token}|${b.ts}`)).size;
+  const tokens = (xs: BuyScore[]) => new Set(xs.map((b) => b.token)).size;
   return {
     buys: usable.length,
+    events: events(usable),
+    crowdedEvents: events(crowded),
+    crowdedTokens: tokens(crowded),
     wallets: rows.length,
     crowded: group(crowded.map((b) => b.delayedReturn.h24)),
     uncrowded: group(uncrowded.map((b) => b.delayedReturn.h24)),
     nCrowded: crowded.length,
     burst: { median: quantile(ratios, 0.5), p90: quantile(ratios, 0.9), max: ratios.length ? Math.max(...ratios) : null },
   };
+}
+
+export function clusters(rows: WalletScore[]): Map<string, number> {
+  const byShape = new Map<string, string[]>();
+  for (const r of rows) {
+    if (r.n === 0) continue;
+    const shape = r.buys.map((b) => `${b.token}|${b.ts}`).sort().join(",");
+    byShape.set(shape, [...(byShape.get(shape) ?? []), r.wallet]);
+  }
+  const out = new Map<string, number>();
+  for (const wallets of byShape.values()) {
+    if (wallets.length < 2) continue;
+    for (const w of wallets) out.set(w, wallets.length);
+  }
+  return out;
 }

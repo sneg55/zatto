@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata = { title: "Zatto", description: "New buyers after Smart Money buys on Base" };
@@ -15,9 +16,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body>
+        <header className="site-header">
+          <div className="shell site-header-inner">
+            <Link href="/" className="wordmark">Zatto</Link>
+            <nav className="site-nav">
+              <Link href="/scan/base">Base leaderboard</Link>
+              <Link href="/#method">Method</Link>
+            </nav>
+          </div>
+        </header>
         <div className="shell">{children}</div>
         <footer className="site-footer">
-          <div className="shell" style={{ justifyContent: "flex-end" }}>
+          <div className="shell site-footer-inner">
+            <span className="footer-note">Zatto reads Base through the Nansen API. Nothing here is advice.</span>
             <a href="https://nansen.ai">Powered by Nansen API</a>
           </div>
         </footer>

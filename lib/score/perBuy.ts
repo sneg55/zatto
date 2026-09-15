@@ -59,5 +59,5 @@ export function scoreBuy({ buy, buckets, closes }: BuyInput): BuyScore {
   const noPrice = entryPrice == null || leaderReturn.h24 == null || delayedReturn.h24 == null;
   const exclusion = capped ? "capped" : !mature ? "immature" : noPrice ? "no-price" : null;
 
-  return { tx: buy.tx, token: buy.token, ts: buy.ts, baselineRate, newBuyers, fastShare, crowdRatio, crowdRatio10, crowded: crowdRatio >= CROWD_RATIO, fillPrice, entryPrice, leaderReturn, delayedReturn, mature, usable: exclusion === null, exclusion };
+  return { tx: buy.tx, token: buy.token, ts: buy.ts, baselineRate, newBuyers, fastShare, crowdRatio, crowdRatio10, crowded: crowdRatio10 >= CROWD_RATIO, fillPrice, entryPrice, leaderReturn, delayedReturn, mature, usable: exclusion === null, exclusion };
 }

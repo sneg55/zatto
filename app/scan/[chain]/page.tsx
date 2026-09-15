@@ -13,7 +13,7 @@ export default async function ScanLatest({ params }: { params: Promise<{ chain: 
         <div className="empty-state">
           <p className="eyebrow">{chain} scan</p>
           <h1>No completed run yet</h1>
-          <p>The first cron run lands within six hours of deploy. A paid run can be requested with the script in the README.</p>
+          <p>Cron opens a run at 00:00, 08:00 and 16:00 UTC. A paid run can be requested with the script in the README.</p>
         </div>
       </main>
     );

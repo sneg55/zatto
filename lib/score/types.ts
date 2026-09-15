@@ -48,7 +48,7 @@ export interface WalletScore {
 }
 
 export interface PooledRun {
-  buys: number; wallets: number; nCrowded: number;
+  buys: number; events: number; crowdedEvents: number; crowdedTokens: number; wallets: number; nCrowded: number;
   crowded: GroupStat; uncrowded: GroupStat;
   burst: { median: number | null; p90: number | null; max: number | null };
 }

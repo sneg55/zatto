@@ -17,13 +17,17 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
 
   return (
     <main>
-      <p className="eyebrow">{chain} wallet</p>
-      <h1 className="wallet-addr">{shortAddr(wallet)}</h1>
-      <p className="link-row">
-        <Link href={`/wallet/${chain}/${wallet}/recent`}>Recent activity</Link>
-        <span className="divider-dot">&middot;</span>
-        <a href={`https://basescan.org/address/${wallet}`}>Basescan</a>
-      </p>
+      <div className="page-head">
+        <p className="eyebrow">{chain} wallet</p>
+        <h1>{shortAddr(wallet)}</h1>
+        <p className="link-row" style={{ margin: "16px 0 0" }}>
+          <Link href={`/wallet/${chain}/${wallet}/recent`}>Recent activity</Link>
+          <span className="divider-dot">&middot;</span>
+          <a href={`https://basescan.org/address/${wallet}`}>Basescan</a>
+          <span className="divider-dot">&middot;</span>
+          <Link href={`/scan/${chain}`}>Back to the leaderboard</Link>
+        </p>
+      </div>
 
       {snap ? (
         <>
@@ -96,8 +100,8 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
                     <td className="num">{b.newBuyers.m30}</td>
                     <td className="num">{b.newBuyers.m60}</td>
                     <td className="num">{b.fastShare == null ? "n/a" : fmtPct(b.fastShare)}</td>
-                    <td className="num">{b.crowdRatio10.toFixed(2)}x</td>
-                    <td className="num">{b.crowdRatio.toFixed(2)}x{b.crowded ? <span className="pill-note">crowded</span> : null}</td>
+                    <td className="num">{b.crowdRatio10.toFixed(2)}x{b.crowded ? <span className="pill-note">crowded</span> : null}</td>
+                    <td className="num">{b.crowdRatio.toFixed(2)}x</td>
                     <td className="num"><Delta value={b.leaderReturn.h24} /></td>
                     <td className="num"><Delta value={b.delayedReturn.h24} /></td>
                     <td>{b.usable ? "usable" : b.exclusion}</td>

@@ -20,11 +20,13 @@ Zatto does not claim any address copied the wallet, and it does not predict.
 
 Each wallet gets a crowd class and a return note:
 
-- `THIN`: fewer than 5 usable buys in the lookback window. Not enough data for a verdict.
-- `CROWDED`: more than half of usable buys drew a crowd (`crowdRatio >= 3`, see Method).
-- `QUIET`: usable buys exist but a crowd formed on half or fewer of them.
+- `THIN`: fewer than 4 scored buys in the lookback window. Not enough data for a verdict.
+- `CROWDED`: more than half of scored buys drew a crowd (`crowdRatio10 >= 3`, see Method).
+- `QUIET`: scored buys exist but a crowd formed on half or fewer of them.
 
-Alongside the crowd class, when both the crowded and the uncrowded group have at least 3 mature buys, the wallet page states the delayed-entry 24h return for each group side by side, for example "delayed entry after crowded buys returned +4.2% vs +11.7% after quiet buys". Otherwise it says there is not enough data in one group to compare.
+Repeated swaps by one wallet into one token inside the same hour are one buy, not several. The profiler returns each fill of a split swap as its own trade, and counting them separately makes a median over copies of a single entry.
+
+The delayed-entry return comparison is stated across the whole run rather than per wallet, because eight buys per wallet rarely fill both groups at `MIN_GROUP`. The scan page states the crowded and quiet medians side by side with the number of buys behind each and the number of distinct token minutes and tokens they came from, so a single entry replicated across an address cluster cannot read as many observations.
 
 ## Quick start
 
@@ -105,22 +107,28 @@ Constants live in `lib/score/constants.ts`. They are choices made for this build
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `CROWD_RATIO` | 3 | New buyers in 60 minutes at or above 3x the baseline rate counts as a crowd |
-| `BASELINE_FLOOR` | 3 | The baseline rate used in that ratio is never treated as lower than 3 per hour, so a baseline of 0 or 1 does not turn a handful of buyers into a crowd |
+| `CROWD_RATIO` | 3 | New buyers in the burst window at or above 3x the token's prior-hour rate, scaled to that window, counts as a crowd |
+| `BASELINE_FLOOR` | 3 | The hourly baseline is never treated as lower than 3 per hour, so a baseline of 0 or 1 does not turn a handful of buyers into a crowd |
+| `BURST_MINUTES` | 10 | The window the crowd verdict is decided on. New buyers over a full hour revert to the token's own rate by construction: across 34 scored buys on Base the 60 minute ratio never reached 3x, while the 10 minute ratio ran a median of 1.04x, 3.15x at the 90th percentile and 17.57x at the top |
+| `BURST_FLOOR` | 2 | The prior-hour rate scaled to the burst window is never treated as lower than 2 buyers |
 | `FAST_SECONDS` | 20 | Window for a "fast arrival" |
 | `DELAYED_ENTRY_SECONDS` | 60 | A delayed entry is priced at the first trade at or after this many seconds past the wallet's buy |
-| `MIN_USABLE_BUYS` | 5 | Below this many usable buys, the wallet's verdict is `THIN` |
+| `MIN_USABLE_BUYS` | 4 | Below this many scored buys, the wallet's verdict is `THIN` |
 | `MIN_GROUP` | 3 | Below this many mature buys in the crowded or the uncrowded group, that group's median return is `insufficient` rather than stated |
 | `LOOKBACK_DAYS` | 30 | How far back qualifying buys are pulled for a wallet |
-| `MAX_BUYS_PER_WALLET` | 10 | The most recent qualifying buys kept per wallet |
+| `MAX_BUYS_PER_WALLET` | 8 | The most recent qualifying buys kept per wallet, after collapsing repeated swaps into one token in one hour |
 | `TOP_WALLETS` | 10 | How many Smart Money wallets a scan run scores, ranked by buy count on the discovered tokens |
+| `DISCOVERY_TOKENS` | 12 | How many tokens a scan sweeps for Smart Money buyers, interleaved from two screener calls: one filtered to tokens under `FRESH_TOKEN_MAX_AGE_DAYS`, one unfiltered. Discovery draws on its own budget, so it cannot starve the wallet fetch |
+| `FRESH_TOKEN_MAX_AGE_DAYS` | 14 | The age bound on the fresh half of discovery. Sorting the screener by volume alone returns tokens already doing tens to hundreds of buyers an hour, where nothing can look like a burst |
 | `MATURITY_MINUTES` | 15 | How long after an hour bucket or a candle minute Zatto waits before treating it as final, to allow for late-indexed trades |
 | `SCORABLE_AGE_MINUTES` | 2880 | How old a buy must be before it is used for scoring. The profiler endpoint does not honor a `date.to` bound inside roughly the last day, so the cutoff has to clear that window, not just the 24 hour return horizon plus maturity |
 | `CARRY_FORWARD_MAX_MINUTES` | 60 | `tgm/token-ohlcv` only returns a candle for a minute that actually had a trade, so a target minute with no candle of its own resolves to the close of the nearest earlier candle, as long as that candle is within this many minutes. Beyond it the price is too stale to use and the minute is recorded `missing` instead |
 
 What the code does today: an hour bucket is fetched from `tgm/dex-trades` up to 3 pages of 1,000 rows; a bucket that still needs a 4th page, or whose stored rows exceed 1,500,000 bytes, is marked capped and every buy that needs it becomes unusable. A `tgm/token-ohlcv` minute with no candle at that exact minute is resolved to the nearest earlier candle within `CARRY_FORWARD_MAX_MINUTES`; past that bound, or with no earlier candle at all, it is recorded as a `candle_gap` row (`missing`, `truncated`, or `pending`) rather than treated as a zero return.
 
-Measured on a real `scripts/proof.ts` run against the live API on 2026-09-15: the screener returned 30 Base tokens; pooling Smart Money buyers across the first 6 of them found 55 distinct candidate wallets; the second candidate tried, `0x595aaf06b5714f7c1767a85cb5e90d9d97428e28`, scored 10 of 10 qualifying buys as usable (0 excluded as capped, immature, or no-price), for a verdict of `QUIET` with a baseline rate of 3 buyers/hour, 1 new buyer in the 60 minutes after each buy, 0% fast-arrival share, and a delayed 24 hour return ranging -0.8% to -2.1% across the ten buys (median -1.2%). The whole run, screener through scored wallet, cost 17 requests.
+Measured on run `manual-base-3` against the live API on 2026-09-15, the run published at `/scan/base/manual-base-3`: 10 wallets scored from 12 discovered tokens for 14 requests on a warm cache, 34 buys scored across 24 distinct token minutes. The burst ratio ran a median of 1.04x, 3.15x at the 90th percentile and 17.57x at the top, and 6 of the 34 buys cleared 3x. Entering one minute after those crowded buys returned a median +98.5% at 24 hours against -12.3% after the 28 quiet ones, and the crowded side is 6 buys over 2 token minutes on a single token, so read it as one swarm rather than six independent observations.
+
+Three of the ten wallets on that board carry byte-identical buy lists under different transaction hashes: the same tokens, the same minutes, the same returns. They are a genuine address cluster, not a duplicated row, and the scan page labels them as one.
 
 ## Endpoints used
 

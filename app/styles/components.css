@@ -21,29 +21,37 @@
 .meta-block {
   border: 1px solid var(--ink-black);
   border-radius: var(--radius);
-  background: var(--bone);
-  padding: 16px;
-  margin: 0 0 24px;
+  background: var(--paper-white);
+  margin: 0 0 32px;
   display: grid;
-  gap: 12px 24px;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  overflow: hidden;
 }
 
 .meta-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+  padding: 14px 16px;
+  border-left: 1px solid var(--stone);
+}
+
+.meta-item:first-child {
+  border-left: none;
 }
 
 .meta-label {
-  font-size: 12px;
-  color: var(--graphite);
-  letter-spacing: 0.02em;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ash-gray);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .meta-value {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 575;
+  line-height: 1.2;
   color: var(--ink-black);
   overflow-wrap: anywhere;
 }
@@ -91,16 +99,37 @@ table.data th {
   font-size: 12px;
   font-weight: 600;
   color: var(--graphite);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   border-bottom: 1px solid var(--ink-black);
-  background: var(--bone);
+  background: var(--paper-white);
+  vertical-align: bottom;
 }
 
 table.data td {
   font-size: 14px;
   border-bottom: 1px solid var(--stone);
   color: var(--ink-black);
+}
+
+table.data tbody tr:hover td {
+  background: var(--bone);
+}
+
+table.data th, table.data td {
+  padding: 13px 14px;
+}
+
+table.data td:first-child, table.data th:first-child {
+  padding-left: 18px;
+}
+
+table.data td:last-child, table.data th:last-child {
+  padding-right: 18px;
+}
+
+table.data td.lead {
+  font-size: 15px;
+  font-weight: 600;
 }
 
 table.data td.num, table.data th.num {
@@ -270,12 +299,85 @@ table.data a:hover {
 }
 
 .wallet-addr {
-  font-family: var(--font-ui);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .pooled {
+  border: 1px solid var(--ink-black);
+  border-radius: var(--radius);
+  background: var(--stone);
+  padding: 28px;
   margin: 0 0 32px;
+}
+
+.pooled .display-sub {
+  font-size: 32px;
+  margin: 0 0 20px;
+}
+
+.pooled-verdict {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--ink-black);
+  margin: 20px 0 0;
+  max-width: 44ch;
+}
+
+.pooled .meta-block {
+  margin: 0;
+  background: var(--paper-white);
+}
+
+.figure-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border: 1px solid var(--ink-black);
+  border-radius: var(--radius);
+  background: var(--paper-white);
+  overflow: hidden;
+}
+
+.figure {
+  flex: 1 1 150px;
+  padding: 16px 18px;
+  border-left: 1px solid var(--stone);
+}
+
+.figure:first-child {
+  border-left: none;
+}
+
+.figure-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ash-gray);
+  margin-bottom: 6px;
+}
+
+.figure-value {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.figure-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--graphite);
+  margin-top: 6px;
 }
 
 .cell-note {
@@ -284,4 +386,67 @@ table.data a:hover {
   font-weight: 400;
   color: var(--graphite);
   margin-top: 2px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr);
+  gap: 48px;
+  align-items: start;
+  padding-block: 16px 56px;
+  border-bottom: 1px solid var(--stone);
+}
+
+.hero-copy .lede {
+  max-width: 52ch;
+}
+
+.hero-panel {
+  border: 1px solid var(--ink-black);
+  border-radius: var(--radius);
+  background: var(--bone);
+  padding: 24px;
+}
+
+.hero-panel-figure {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin: 4px 0 8px;
+}
+
+.hero-panel-label {
+  font-size: 13px;
+  color: var(--graphite);
+  margin: 0 0 16px;
+}
+
+.hero-panel-note {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--stone);
+}
+
+.hero-panel-meta {
+  font-size: 12px;
+  color: var(--ash-gray);
+  margin: 0;
+}
+
+.hero-panel-meta a {
+  font-family: var(--font-mono);
+  color: var(--graphite);
+  text-decoration: none;
+  border-bottom: 1px solid var(--fog);
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
 }

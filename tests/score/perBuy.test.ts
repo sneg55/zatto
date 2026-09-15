@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { scoreBuy, hourKey, neededHours } from "@/lib/score/perBuy";
-import { buckets, closes, crowdedRows, row, LEADER, T0_ISO } from "../fixtures/synthetic/tape";
+import { buckets, burstRows, closes, crowdedRows, row, LEADER, T0_ISO } from "../fixtures/synthetic/tape";
 
 const buy = { chain: "base", wallet: LEADER, token: "0xtok", tx: "0xtx00xleader", ts: T0_ISO, usd: 100, price: 1.0 };
 const std = closes([[0, 1.0], [1, 1.05], [60, 1.2], [1440, 0.9]]);
@@ -19,12 +19,24 @@ describe("scoreBuy", () => {
     const s = scoreBuy({ buy, buckets: buckets(crowdedRows), closes: std });
     expect(s.fastShare).toBeCloseTo(3 / 11);
   });
-  it("crowd ratio uses the baseline floor of 3 and crowded is >= 3x", () => {
+  it("the hour ratio uses the baseline floor of 3", () => {
     const s = scoreBuy({ buy, buckets: buckets(crowdedRows), closes: std });
     expect(s.crowdRatio).toBeCloseTo(11 / 3);
-    expect(s.crowded).toBe(true);
     const quiet = scoreBuy({ buy, buckets: buckets(crowdedRows.slice(0, 7)), closes: std });
     expect(quiet.crowdRatio).toBeCloseTo(2 / 3);
+  });
+  it("marks a burst crowded even though the same buy is quiet over the hour", () => {
+    const s = scoreBuy({ buy, buckets: buckets(burstRows), closes: std });
+    expect(s.newBuyers.m10).toBe(7);
+    expect(s.crowdRatio).toBeLessThan(3);
+    expect(s.crowdRatio10).toBeCloseTo(7 / 2);
+    expect(s.crowded).toBe(true);
+  });
+  it("crowded is decided on the ten minute burst, not the hour that reverts to baseline", () => {
+    const s = scoreBuy({ buy, buckets: buckets(crowdedRows), closes: std });
+    expect(s.crowdRatio10).toBeCloseTo(5 / 2);
+    expect(s.crowded).toBe(false);
+    const quiet = scoreBuy({ buy, buckets: buckets(crowdedRows.slice(0, 7)), closes: std });
     expect(quiet.crowded).toBe(false);
   });
   it("the ten minute ratio measures the burst against the prior hour rate scaled to ten minutes", () => {

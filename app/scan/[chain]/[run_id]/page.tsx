@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db/d1";
 import { readJob, readScoresForRun } from "@/lib/db/queries";
-import { pooledRun, sortLeaderboard } from "@/lib/score/perWallet";
+import { clusters, pooledRun, sortLeaderboard } from "@/lib/score/perWallet";
 import { fmtDateTime, fmtExcluded, fmtNum, fmtPct, fmtRatio, shortAddr } from "@/lib/format";
 import type { Candidate } from "@/lib/jobs/types";
 import { VerdictTag, StatusTag } from "@/app/_components/Tag";
@@ -27,14 +27,18 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
   }
   const rows = sortLeaderboard(await readScoresForRun(db, chain, run_id));
   const pooled = pooledRun(rows);
+  const cluster = clusters(rows);
   const candidates = JSON.parse(job.candidates) as Candidate[];
   const dropped = candidates.filter((c) => c.dropped);
   const comparable = !pooled.crowded.insufficient && !pooled.uncrowded.insufficient;
 
   return (
     <main>
-      <p className="eyebrow">{chain} leaderboard</p>
-      <h1>Smart Money crowding, run {run_id}</h1>
+      <div className="page-head">
+        <p className="eyebrow">{chain} leaderboard</p>
+        <h1>Who gets copied when Smart Money buys</h1>
+        <span className="run-id">run {run_id}</span>
+      </div>
 
       <div className="meta-block">
         <div className="meta-item">
@@ -74,38 +78,39 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
 
       <section className="pooled">
         <h2 className="display-sub">Across the run</h2>
-        <div className="meta-block">
-          <div className="meta-item">
-            <span className="meta-label">Buys scored</span>
-            <span className="meta-value">{pooled.buys} across {pooled.wallets} wallets</span>
+        <div className="figure-row">
+          <div className="figure">
+            <span className="figure-label">Buys scored</span>
+            <span className="figure-value">{pooled.buys}</span>
+            <span className="figure-sub">{pooled.events} distinct token minutes, {pooled.wallets} wallets</span>
           </div>
-          <div className="meta-item">
-            <span className="meta-label">Burst, median</span>
-            <span className="meta-value">{fmtRatio(pooled.burst.median)}</span>
+          <div className="figure">
+            <span className="figure-label">Burst, median</span>
+            <span className="figure-value">{fmtRatio(pooled.burst.median)}</span>
+            <span className="figure-sub">new buyers against the prior hour</span>
           </div>
-          <div className="meta-item">
-            <span className="meta-label">Burst, 90th</span>
-            <span className="meta-value">{fmtRatio(pooled.burst.p90)}</span>
+          <div className="figure">
+            <span className="figure-label">Burst, 90th</span>
+            <span className="figure-value">{fmtRatio(pooled.burst.p90)}</span>
+            <span className="figure-sub">highest {fmtRatio(pooled.burst.max)}</span>
           </div>
-          <div className="meta-item">
-            <span className="meta-label">Burst, highest</span>
-            <span className="meta-value">{fmtRatio(pooled.burst.max)}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Crowded buys</span>
-            <span className="meta-value">{pooled.nCrowded} of {pooled.buys} at {CROWD_RATIO}x</span>
+          <div className="figure">
+            <span className="figure-label">Crowded</span>
+            <span className="figure-value">{pooled.nCrowded}</span>
+            <span className="figure-sub">of {pooled.buys} buys at {CROWD_RATIO}x</span>
           </div>
         </div>
-        <p className="foot-note">
+        <p className="pooled-verdict">
           {comparable ? (
             <>
-              Entering one minute after a crowded buy returned <Delta value={pooled.crowded.median} /> at 24 hours
-              (n={pooled.crowded.n}), against <Delta value={pooled.uncrowded.median} /> after a quiet one
-              (n={pooled.uncrowded.n}).
+              Entering one minute after a crowded buy returned <Delta value={pooled.crowded.median} /> at 24 hours,
+              against <Delta value={pooled.uncrowded.median} /> after a quiet one. That is {pooled.crowded.n} crowded
+              buys over {pooled.crowdedEvents} distinct token minutes on {pooled.crowdedTokens}{" "}
+              {pooled.crowdedTokens === 1 ? "token" : "tokens"}, against {pooled.uncrowded.n} quiet ones.
             </>
           ) : (
             <>
-              No return comparison yet: {pooled.nCrowded} of {pooled.buys} scored buys cleared {CROWD_RATIO}x the
+              No return comparison yet. {pooled.nCrowded} of {pooled.buys} scored buys cleared {CROWD_RATIO}x the
               token&apos;s prior-hour buyer rate, and the comparison needs three on each side.
             </>
           )}
@@ -123,7 +128,7 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
               <th className="num">Baseline per hour</th>
               <th className="num">Fast arrivals</th>
               <th className="num">Crowded buys</th>
-              <th className="num">Scored buys</th>
+              <th className="num">Scored</th>
             </tr>
           </thead>
           <tbody>
@@ -131,7 +136,10 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
               const note = fmtExcluded(r.excluded);
               return (
                 <tr key={r.wallet} className={r.provisional ? "row-muted" : undefined}>
-                  <td><Link href={`/wallet/${chain}/${r.wallet}?run=${run_id}`} className="wallet-addr">{shortAddr(r.wallet)}</Link></td>
+                  <td className="lead">
+                    <Link href={`/wallet/${chain}/${r.wallet}?run=${run_id}`} className="wallet-addr">{shortAddr(r.wallet)}</Link>
+                    {cluster.has(r.wallet) ? <span className="cell-note">same buys as {cluster.get(r.wallet)! - 1} other {cluster.get(r.wallet) === 2 ? "wallet" : "wallets"}</span> : null}
+                  </td>
                   <td><VerdictTag verdict={r.verdict} provisional={r.provisional} /></td>
                   <td className="num">{fmtRatio(r.burstRatio)}</td>
                   <td className="num">{fmtNum(r.newBuyersPerBuy)}</td>
@@ -139,7 +147,7 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
                   <td className="num">{r.fastShare.mean == null ? "n/a" : fmtPct(r.fastShare.mean)}</td>
                   <td className="num">{r.n ? `${r.nCrowded} of ${r.n}` : "n/a"}</td>
                   <td className="num">
-                    {r.n} ({r.tokens} tokens)
+                    {r.n} {r.tokens === 1 ? "buy" : "buys"}, {r.tokens} {r.tokens === 1 ? "token" : "tokens"}
                     {note ? <span className="cell-note">{note}</span> : null}
                   </td>
                 </tr>
