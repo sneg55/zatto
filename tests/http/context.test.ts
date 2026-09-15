@@ -21,4 +21,25 @@ describe("http context lazy db import", () => {
     expect(() => mod.assertPublicBaseUrl(undefined)).toThrow(/PUBLIC_BASE_URL/);
     expect(mod.assertPublicBaseUrl("https://zatto.example.workers.dev")).toBe("https://zatto.example.workers.dev");
   });
+
+  it("binds the service-binding fetch to its receiver so triggerStep reaches it", async () => {
+    const mod = await import("@/lib/http/context");
+    let called = false;
+    const binding = {
+      fetch(this: unknown) {
+        if (this !== binding) throw new TypeError("Illegal invocation");
+        called = true;
+        return Promise.resolve(new Response("{}", { status: 200 }));
+      },
+    };
+    const waited: Promise<unknown>[] = [];
+    const ctx = {
+      env: { PUBLIC_BASE_URL: "https://z.test", INTERNAL_SECRET: "s".repeat(64), WORKER_SELF_REFERENCE: binding },
+      fetch: (() => { throw new Error("should not fall back to global fetch"); }) as unknown as typeof fetch,
+      waitUntil: (p: Promise<unknown>) => { waited.push(p); },
+    } as unknown as import("@/lib/http/context").AppContext;
+    expect(() => mod.triggerStep(ctx, "r1")).not.toThrow();
+    await Promise.all(waited);
+    expect(called).toBe(true);
+  });
 });

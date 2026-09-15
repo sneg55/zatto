@@ -11,6 +11,8 @@ function ctx(db: ReturnType<typeof openTestDb>): AppContext & { triggered: strin
   return { db, env: { DB: db, NANSEN_API_KEY: "k", X402_PAY_TO: "0x1", INTERNAL_SECRET: "s".repeat(64), FACILITATOR_URL: "https://f", DAILY_CREDIT_BUDGET: "3000", RUN_REQUEST_CAP: "600", LIVE_WALLET_PER_IP_PER_HOUR: "10", LIVE_WALLET_CONCURRENCY: "2", PUBLIC_BASE_URL: "https://z.test" }, now: () => new Date("2026-09-15T12:00:00Z"), fetch: f, waitUntil: (p) => { void p; }, triggered };
 }
 const req = (secret: string | null, body: unknown) => new Request("https://z.test/api/internal/scan-step", { method: "POST", headers: secret ? { "X-Zatto-Internal": secret, "content-type": "application/json" } : { "content-type": "application/json" }, body: JSON.stringify(body) });
+const buy = (wallet: string, i: number) => ({ chain: "base", wallet, token: "0xt" + i, tx: "0xtx" + wallet + i, ts: `2026-09-10T1${i % 9}:03:11.000Z`, usd: 10, price: 1 });
+const cand = (wallet: string, n: number) => ({ wallet, buys: Array.from({ length: n }, (_, i) => buy(wallet, i)), buckets: [] });
 
 describe("internal scan-step", () => {
   it("404s without the secret, with a wrong secret, and with an unknown run", async () => {
@@ -27,5 +29,19 @@ describe("internal scan-step", () => {
     expect(res.status).toBe(200);
     expect((await readJob(db, "r1"))?.status).toBe("done");
     expect(c.triggered.length).toBe(0);
+  });
+  it("does not turn a throwing trigger into a 500 for a step that already committed", async () => {
+    const db = openTestDb();
+    const c = ctx(db);
+    (c.env as unknown as { WORKER_SELF_REFERENCE: { fetch: () => Promise<Response> } }).WORKER_SELF_REFERENCE = {
+      fetch: () => { throw new TypeError("Illegal invocation"); },
+    };
+    await createJob(db, { runId: "r3", chain: "base", source: "cron", status: "settled", now: "2026-09-15T12:00:00.000Z" });
+    await saveJobPlan(db, "r3", [cand("0xa", 40), cand("0xb", 40)], 200, "2026-09-15T12:00:00.000Z");
+    const res = await handleInternalStep(c, req("s".repeat(64), { run_id: "r3" }));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { done: boolean };
+    expect(body.done).toBe(false);
+    expect((await readJob(db, "r3"))?.status).toBe("running");
   });
 });

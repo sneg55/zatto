@@ -10,8 +10,13 @@ const worker = {
   async scheduled(_event: ScheduledEvent, env: ZattoEnv, ctx: ExecutionContext) {
     assertPublicBaseUrl(env.PUBLIC_BASE_URL);
     const trigger = async (runId: string) => {
-      const f = env.WORKER_SELF_REFERENCE?.fetch ?? fetch;
-      ctx.waitUntil(f(`${env.PUBLIC_BASE_URL}/api/internal/scan-step`, { method: "POST", headers: { "X-Zatto-Internal": env.INTERNAL_SECRET, "content-type": "application/json" }, body: JSON.stringify({ run_id: runId }) }).then(() => undefined, () => undefined));
+      const binding = env.WORKER_SELF_REFERENCE;
+      const f = binding ? binding.fetch.bind(binding) : fetch.bind(globalThis);
+      try {
+        ctx.waitUntil(f(`${env.PUBLIC_BASE_URL}/api/internal/scan-step`, { method: "POST", headers: { "X-Zatto-Internal": env.INTERNAL_SECRET, "content-type": "application/json" }, body: JSON.stringify({ run_id: runId }) }).then(() => undefined, () => undefined));
+      } catch {
+        return;
+      }
     };
     await sweep(env.DB, { chains: ["base"], cronHoursUtc: [0, 6, 12, 18], maxAttempts: MAX_ATTEMPTS }, new Date(), trigger);
   },

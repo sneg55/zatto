@@ -23,8 +23,13 @@ export function nansenClient(ctx: AppContext, runId: string | null, maxThrottleM
 
 export function triggerStep(ctx: AppContext, runId: string): void {
   const url = `${ctx.env.PUBLIC_BASE_URL}/api/internal/scan-step`;
-  const f = ctx.env.WORKER_SELF_REFERENCE?.fetch ?? ctx.fetch;
-  ctx.waitUntil(f(url, { method: "POST", headers: { "X-Zatto-Internal": ctx.env.INTERNAL_SECRET, "content-type": "application/json" }, body: JSON.stringify({ run_id: runId }) }).then(() => undefined, () => undefined));
+  const binding = ctx.env.WORKER_SELF_REFERENCE;
+  const f = binding ? binding.fetch.bind(binding) : ctx.fetch.bind(globalThis);
+  try {
+    ctx.waitUntil(f(url, { method: "POST", headers: { "X-Zatto-Internal": ctx.env.INTERNAL_SECRET, "content-type": "application/json" }, body: JSON.stringify({ run_id: runId }) }).then(() => undefined, () => undefined));
+  } catch {
+    return;
+  }
 }
 
 export function constantTimeEqual(a: string, b: string): boolean {
