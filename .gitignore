@@ -4,6 +4,12 @@ node_modules/
 .wrangler/
 .env
 .env.*
+.dev.vars
 docs/internal/
 *.log
 .DS_Store
+cloudflare-env.d.ts
+next-env.d.ts
+*.tsbuildinfo
+/coverage
+.harness/

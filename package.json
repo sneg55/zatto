@@ -1,0 +1,50 @@
+{
+  "name": "zatto",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "migrate:local": "wrangler d1 migrations apply zatto --local",
+    "migrate:remote": "wrangler d1 migrations apply zatto --remote",
+    "test": "vitest run",
+    "proof": "tsx scripts/proof.ts",
+    "pay": "tsx scripts/pay.ts",
+    "seed:fixtures": "tsx scripts/seed-fixtures.ts",
+    "smoke": "tsx scripts/smoke.ts"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.6",
+    "@x402/core": "^2.25.0",
+    "@x402/evm": "^2.25.0",
+    "@x402/fetch": "^2.25.0",
+    "@x402/next": "^2.25.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "viem": "^2.56.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.20.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^5.0.1",
+    "better-sqlite3": "^13.0.3",
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "vitest": "^5.0.1",
+    "wrangler": "^4.131.2"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true,
+    "fsevents@2.3.3": true,
+    "workerd@1.20260911.1": true,
+    "esbuild@0.25.4": true,
+    "esbuild@0.28.2": true,
+    "esbuild@0.28.1": true
+  }
+}

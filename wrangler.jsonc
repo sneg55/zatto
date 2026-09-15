@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "zatto",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-09-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "zatto" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "zatto", "database_id": "REPLACE_AFTER_wrangler_d1_create", "migrations_dir": "migrations" }],
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "vars": {
+    "DAILY_CREDIT_BUDGET": "3000",
+    "RUN_REQUEST_CAP": "600",
+    "LIVE_WALLET_PER_IP_PER_HOUR": "10",
+    "LIVE_WALLET_CONCURRENCY": "2",
+    "PUBLIC_BASE_URL": "https://zatto.REPLACE.workers.dev"
+  }
+}
