@@ -3,7 +3,7 @@ import { FacilitatorCapabilityError, HTTPFacilitatorClient, RouteConfigurationEr
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import type { NextRequest } from "next/server";
 import type { AppContext } from "../http/context";
-import { createJob, readJobByPayment, setJobPayment, failJob } from "../db/queries";
+import { createJob, readJobByPayment, setJobPayment, claimJobForSettlement, failSettlingJob } from "../db/queries";
 import { triggerStep } from "../http/context";
 
 export const SCAN_PRICE_USDC_UNITS = "5000000";
@@ -97,15 +97,21 @@ export async function handlePaidScan(ctx: AppContext, req: NextRequest, chain: s
       return Response.json({ run_id: concurrent.run_id, payment_tx: concurrent.payment_tx, url: scanUrl(concurrent.run_id) }, { status: 202 });
     }
   }
+  const claimed = await claimJobForSettlement(ctx.db, runId);
+  if (!claimed) {
+    const latest = await readJobByPayment(ctx.db, paymentId);
+    if (latest?.status === "failed") return Response.json({ run_id: latest.run_id, error: latest.error }, { status: 402 });
+    return Response.json({ run_id: runId, payment_tx: latest?.payment_tx ?? null, url: scanUrl(runId) }, { status: 202 });
+  }
   let settle;
   try {
     settle = await server.processSettlement(result.paymentPayload, result.paymentRequirements, result.declaredExtensions, { request: context }, undefined, result.beforeHandlerSettlement);
   } catch {
-    await failJob(ctx.db, runId, "settlement facilitator unreachable", now.toISOString());
+    await failSettlingJob(ctx.db, runId, "settlement facilitator unreachable", now.toISOString());
     return Response.json({ error: "settlement facilitator unreachable" }, { status: 503 });
   }
   if (!settle.success) {
-    await failJob(ctx.db, runId, `settlement failed: ${settle.errorReason}`, now.toISOString());
+    await failSettlingJob(ctx.db, runId, `settlement failed: ${settle.errorReason}`, now.toISOString());
     return toResponse(settle.response);
   }
   await setJobPayment(ctx.db, runId, settle.transaction);

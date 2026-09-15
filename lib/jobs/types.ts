@@ -1,7 +1,7 @@
 import type { Buy } from "../score/types";
 
 export interface Candidate { wallet: string; buys: Buy[]; buckets: Array<{ token: string; hour: string }>; dropped?: string }
-export type JobStatus = "created" | "settled" | "running" | "done" | "failed";
+export type JobStatus = "created" | "settling" | "settled" | "running" | "done" | "failed";
 export interface ScanJob {
   run_id: string; chain: string; source: "cron" | "paid"; status: JobStatus;
   created_at: string; started_at: string | null; finished_at: string | null;

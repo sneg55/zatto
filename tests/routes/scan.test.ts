@@ -130,4 +130,39 @@ describe("paid scan", () => {
     expect(ja.run_id).toBe(jb.run_id);
     expect((await db.prepare("SELECT COUNT(*) AS n FROM scan_jobs").first<{ n: number }>())?.n).toBe(1);
   });
+
+  it("a request that arrives while another is settling the same payment does not double-settle", async () => {
+    const db = openTestDb(); const c = ctx(db);
+    let settlementCalls = 0;
+    let releaseGate!: () => void;
+    const gate = new Promise<void>((resolve) => { releaseGate = resolve; });
+    const gatedServer = {
+      processHTTPRequest: async (cc: { paymentHeader?: string }) => cc.paymentHeader
+        ? { type: "payment-verified", paymentPayload: payload, paymentRequirements: { scheme: "exact", network: "eip155:8453", asset: "0xusdc", amount: "5000000", payTo: "0x1", maxTimeoutSeconds: 300, extra: {} }, cancellationDispatcher: { cancel: async () => null } }
+        : { type: "payment-error", response: { status: 402, headers: {}, body: { error: "payment required" } } },
+      processSettlement: async () => {
+        settlementCalls++;
+        await gate;
+        return { success: true, transaction: "0xtxA", network: "eip155:8453", headers: { "PAYMENT-RESPONSE": "b64resp" }, requirements: {} };
+      },
+    } as never;
+
+    const aPromise = handlePaidScan(c, req("sig"), "base", gatedServer);
+    await new Promise((r) => setTimeout(r, 0));
+    const b = await handlePaidScan(c, req("sig"), "base", gatedServer);
+    expect(b.status).toBe(202);
+    const bj = await b.json() as { run_id: string; payment_tx: string | null };
+    expect(bj.payment_tx).toBeNull();
+    releaseGate();
+    const a = await aPromise;
+    expect(a.status).toBe(202);
+    const aj = await a.json() as { run_id: string; payment_tx: string };
+    expect(bj.run_id).toBe(aj.run_id);
+    expect(settlementCalls).toBe(1);
+    expect((await db.prepare("SELECT COUNT(*) AS n FROM scan_jobs").first<{ n: number }>())?.n).toBe(1);
+    const job = await db.prepare("SELECT status, payment_tx, error FROM scan_jobs").first<{ status: string; payment_tx: string; error: string | null }>();
+    expect(job?.status).toBe("settled");
+    expect(job?.payment_tx).toBe("0xtxA");
+    expect(job?.error).toBeNull();
+  });
 });

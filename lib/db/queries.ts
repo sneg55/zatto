@@ -178,6 +178,15 @@ export async function setJobPayment(db: D1Like, runId: string, tx: string): Prom
   await db.prepare("UPDATE scan_jobs SET status = 'settled', payment_tx = ? WHERE run_id = ?").bind(tx, runId).run();
 }
 
+export async function claimJobForSettlement(db: D1Like, runId: string): Promise<boolean> {
+  const r = await db.prepare("UPDATE scan_jobs SET status = 'settling' WHERE run_id = ? AND status = 'created'").bind(runId).run();
+  return r.meta.changes === 1;
+}
+
+export async function failSettlingJob(db: D1Like, runId: string, error: string, finishedAt: string): Promise<void> {
+  await db.prepare("UPDATE scan_jobs SET status = 'failed', error = ?, finished_at = ?, lease_until = NULL WHERE run_id = ? AND status = 'settling'").bind(error, finishedAt, runId).run();
+}
+
 export async function expiredRunningJobs(db: D1Like, nowIso: string, maxAttempts: number): Promise<ScanJob[]> {
   return (await db.prepare("SELECT * FROM scan_jobs WHERE status IN ('settled','running') AND (lease_until IS NULL OR lease_until < ?) AND attempts < ?").bind(nowIso, maxAttempts).all<ScanJob>()).results;
 }
