@@ -1,4 +1,4 @@
-// @ts-expect-error generated at build time by opennextjs-cloudflare
+// @ts-expect-error
 import { default as handler } from "../.open-next/worker.js";
 import { sweep } from "../lib/jobs/sweeper";
 import { MAX_ATTEMPTS } from "../lib/jobs/leases";
