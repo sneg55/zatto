@@ -1,5 +1,5 @@
 import { MIN_GROUP, MIN_USABLE_BUYS } from "./constants";
-import type { BuyScore, GroupStat, PooledRun, Verdict, WalletScore } from "./types";
+import type { BuyScore, GroupStat, PooledRun, TokenStat, Verdict, WalletScore } from "./types";
 
 function median(xs: number[]): number | null {
   if (xs.length === 0) return null;
@@ -69,6 +69,39 @@ export function quantile(xs: number[], q: number): number | null {
   return lo === hi ? s[lo] : s[lo] + (s[hi] - s[lo]) * (i - lo);
 }
 
+export const BURST_BANDS: Array<{ label: string; min: number; max: number }> = [
+  { label: "under 1x", min: 0, max: 1 },
+  { label: "1 to 2x", min: 1, max: 2 },
+  { label: "2 to 3x", min: 2, max: 3 },
+  { label: "3 to 5x", min: 3, max: 5 },
+  { label: "5x and up", min: 5, max: Infinity },
+];
+
+export function burstDistribution(ratios: number[]): Array<{ label: string; count: number }> {
+  return BURST_BANDS.map((b) => ({ label: b.label, count: ratios.filter((r) => r >= b.min && r < b.max).length }));
+}
+
+export function tokenBreakdown(rows: WalletScore[]): TokenStat[] {
+  const byToken = new Map<string, BuyScore[]>();
+  const wallets = new Map<string, Set<string>>();
+  for (const r of rows) for (const b of r.buys) {
+    if (!b.usable) continue;
+    byToken.set(b.token, [...(byToken.get(b.token) ?? []), b]);
+    wallets.set(b.token, (wallets.get(b.token) ?? new Set()).add(r.wallet));
+  }
+  return [...byToken.entries()]
+    .map(([token, buys]) => ({
+      token,
+      buys: buys.length,
+      events: new Set(buys.map((b) => b.ts)).size,
+      wallets: wallets.get(token)?.size ?? 0,
+      crowded: buys.filter((b) => b.crowded).length,
+      medianBurst: median(buys.map((b) => b.crowdRatio10)),
+      medianDelayed24h: median(buys.map((b) => b.delayedReturn.h24).filter((v): v is number => v != null)),
+    }))
+    .sort((a, b) => b.crowded - a.crowded || (b.medianBurst ?? -Infinity) - (a.medianBurst ?? -Infinity) || a.token.localeCompare(b.token));
+}
+
 export function pooledRun(rows: WalletScore[]): PooledRun {
   const usable = rows.flatMap((r) => r.buys.filter((b) => b.usable));
   const crowded = usable.filter((b) => b.crowded);
@@ -86,6 +119,7 @@ export function pooledRun(rows: WalletScore[]): PooledRun {
     uncrowded: group(uncrowded.map((b) => b.delayedReturn.h24)),
     nCrowded: crowded.length,
     burst: { median: quantile(ratios, 0.5), p90: quantile(ratios, 0.9), max: ratios.length ? Math.max(...ratios) : null },
+    distribution: burstDistribution(ratios),
   };
 }
 

@@ -1,6 +1,6 @@
 import type { D1Like } from "../db/d1";
 
-export const LEASE_SECONDS = 60;
+export const LEASE_SECONDS = 900;
 export const MAX_ATTEMPTS = 5;
 
 export async function takeLiveSlot(db: D1Like, concurrency: number, nowIso: string, untilIso: string): Promise<string | null> {

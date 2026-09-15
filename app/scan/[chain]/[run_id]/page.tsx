@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/d1";
-import { publishedJobs, readJob, readScoresForRun } from "@/lib/db/queries";
-import { clusters, pooledRun, sortLeaderboard } from "@/lib/score/perWallet";
+import { publishedJobs, readJob, readScoresForRun, readTokenNames } from "@/lib/db/queries";
+import { clusters, pooledRun, sortLeaderboard, tokenBreakdown } from "@/lib/score/perWallet";
 import { fmtDateTime, fmtRatio, shortAddr } from "@/lib/format";
-import { isSupportedChain } from "@/lib/chains";
+import { explorerToken, isSupportedChain } from "@/lib/chains";
 import type { Candidate } from "@/lib/jobs/types";
 import { StatusTag } from "@/app/_components/Tag";
 import { Delta } from "@/app/_components/Delta";
@@ -40,6 +40,8 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
   const candidates = JSON.parse(job.candidates) as Candidate[];
   const dropped = candidates.filter((c) => c.dropped);
   const comparable = !pooled.crowded.insufficient && !pooled.uncrowded.insufficient;
+  const byToken = tokenBreakdown(rows);
+  const symbols = await readTokenNames(db, chain, byToken.map((t) => t.token));
   const history = (await publishedJobs(db, chain, 6)).filter((j) => j.run_id !== run_id);
   const baseUrl = process.env.PUBLIC_BASE_URL ?? "https://zatto.nsawinyh.workers.dev";
 
@@ -128,7 +130,66 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
         </p>
       </section>
 
+      {pooled.buys ? (
+        <section className="band">
+          <h2 className="display-sub">How hard the bursts hit</h2>
+          <p className="foot-note" style={{ marginTop: 0 }}>
+            Every scored buy placed by its 10 minute burst against the token&apos;s prior-hour rate. Anything from 3x
+            is called crowded.
+          </p>
+          <ul className="histogram">
+            {pooled.distribution.map((b) => (
+              <li key={b.label} className={b.label === "3 to 5x" || b.label === "5x and up" ? "bar-crowded" : undefined}>
+                <span className="bar-label">{b.label}</span>
+                <span className="bar-track">
+                  <span className="bar-fill" style={{ width: `${pooled.buys ? Math.round((b.count / pooled.buys) * 100) : 0}%` }} />
+                </span>
+                <span className="bar-count">{b.count}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <Leaderboard chain={chain} runId={run_id} rows={rows} cluster={cluster} />
+
+      {byToken.length ? (
+        <section className="section">
+          <h2 className="display-sub">Where the crowding happened</h2>
+          <div className="table-wrap">
+            <table className="data data-cards">
+              <thead>
+                <tr>
+                  <th>Token</th>
+                  <th className="num">Scored buys</th>
+                  <th className="num">Entries</th>
+                  <th className="num">Wallets</th>
+                  <th className="num">Crowded</th>
+                  <th className="num">Burst, median</th>
+                  <th className="num">Delayed 24h, median</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byToken.map((t) => (
+                  <tr key={t.token}>
+                    <td data-label="Token" className="lead">
+                      <a href={explorerToken(chain, t.token)} target="_blank" rel="noopener noreferrer" className={symbols.get(t.token) ? undefined : "wallet-addr"}>
+                        {symbols.get(t.token) ?? shortAddr(t.token)}
+                      </a>
+                    </td>
+                    <td data-label="Scored buys" className="num">{t.buys}</td>
+                    <td data-label="Entries" className="num">{t.events}</td>
+                    <td data-label="Wallets" className="num">{t.wallets}</td>
+                    <td data-label="Crowded" className="num">{t.crowded}</td>
+                    <td data-label="Burst, median" className="num">{fmtRatio(t.medianBurst)}</td>
+                    <td data-label="Delayed 24h, median" className="num"><Delta value={t.medianDelayed24h} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       {dropped.length ? (
         <p className="foot-note">

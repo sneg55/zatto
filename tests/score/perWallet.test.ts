@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { clusters, pooledRun, scoreWallet, sortLeaderboard } from "@/lib/score/perWallet";
+import { burstDistribution, clusters, pooledRun, scoreWallet, sortLeaderboard, tokenBreakdown } from "@/lib/score/perWallet";
 import type { BuyScore } from "@/lib/score/types";
 
 function mk(p: Partial<BuyScore> & { crowded: boolean; d24?: number | null }): BuyScore {
@@ -85,5 +85,29 @@ describe("clusters", () => {
     expect(found.get("0xa")).toBe(2);
     expect(found.get("0xb")).toBe(2);
     expect(found.has("0xc")).toBe(false);
+  });
+});
+
+describe("burstDistribution and tokenBreakdown", () => {
+  it("places every scored buy in exactly one band", () => {
+    const bands = burstDistribution([0.4, 1, 1.9, 2, 2.99, 3, 4.9, 5, 17.57]);
+    expect(bands.map((b) => b.count)).toEqual([1, 2, 2, 2, 2]);
+    expect(bands.reduce((n, b) => n + b.count, 0)).toBe(9);
+  });
+
+  it("groups scored buys by token and ranks the crowded ones first", () => {
+    const quiet = scoreWallet("base", "0xa", [
+      mk({ crowded: false, token: "0xcalm", ts: "2026-09-11T10:00:00.000Z", d24: -0.1 }),
+      mk({ crowded: false, token: "0xcalm", ts: "2026-09-11T12:00:00.000Z", d24: -0.2 }),
+      mk({ crowded: true, token: "0xhot", ts: "2026-09-12T10:00:00.000Z", d24: 0.5 }),
+    ]);
+    const peer = scoreWallet("base", "0xb", [mk({ crowded: true, token: "0xhot", ts: "2026-09-12T10:00:00.000Z", d24: 0.5 })]);
+    const rows = tokenBreakdown([quiet, peer]);
+    expect(rows[0].token).toBe("0xhot");
+    expect(rows[0].crowded).toBe(2);
+    expect(rows[0].wallets).toBe(2);
+    expect(rows[0].events).toBe(1);
+    expect(rows[1].token).toBe("0xcalm");
+    expect(rows[1].medianDelayed24h).toBeCloseTo(-0.15);
   });
 });

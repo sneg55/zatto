@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { openTestDb } from "../helpers/d1";
 import { sweep } from "@/lib/jobs/sweeper";
 import { createJob, readJob, saveJobProgress } from "@/lib/db/queries";
+import { LEASE_SECONDS } from "@/lib/jobs/leases";
+import { DEFAULT_BUDGETS } from "@/lib/jobs/types";
 
 describe("sweep", () => {
   it("resumes expired leases, fails at the attempt limit, and creates the cron job on schedule", async () => {
@@ -73,5 +75,12 @@ describe("sweep", () => {
     expect(again.created).toBeNull();
     const nextWindow = await sweep(db, cfg, new Date("2026-09-15T18:02:00Z"), async () => {});
     expect(nextWindow.created).toMatch(/^cron-base-/);
+  });
+});
+
+describe("lease length", () => {
+  it("outlasts the slowest step a run can take, so the sweeper cannot start a second plan on top of one in flight", () => {
+    const worstStepSeconds = DEFAULT_BUDGETS.seconds + DEFAULT_BUDGETS.planRequests * 5;
+    expect(LEASE_SECONDS).toBeGreaterThan(worstStepSeconds);
   });
 });
