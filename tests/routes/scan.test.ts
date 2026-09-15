@@ -21,7 +21,7 @@ const req = (sig?: string) => new NextRequest("https://z.test/api/scan/base", { 
 function server(script: { verified: boolean; settleOk: boolean }) {
   return {
     processHTTPRequest: async (c: { paymentHeader?: string }) => c.paymentHeader && script.verified
-      ? { type: "payment-verified", paymentPayload: payload, paymentRequirements: { scheme: "exact", network: "eip155:8453", asset: "0xusdc", amount: "5000000", payTo: "0x1", maxTimeoutSeconds: 300, extra: {} }, cancellationDispatcher: { cancel: async () => null } }
+      ? { type: "payment-verified", paymentPayload: payload, paymentRequirements: { scheme: "exact", network: "eip155:8453", asset: "0xusdc", amount: "1000000", payTo: "0x1", maxTimeoutSeconds: 300, extra: {} }, cancellationDispatcher: { cancel: async () => null } }
       : { type: "payment-error", response: { status: 402, headers: { "PAYMENT-REQUIRED": "b64" }, body: { error: "payment required" } } },
     processSettlement: async () => script.settleOk
       ? { success: true, transaction: "0xtx", network: "eip155:8453", headers: { "PAYMENT-RESPONSE": "b64resp" }, requirements: {} }
@@ -32,7 +32,7 @@ function server(script: { verified: boolean; settleOk: boolean }) {
 function throwingSettleServer() {
   return {
     processHTTPRequest: async (c: { paymentHeader?: string }) => c.paymentHeader
-      ? { type: "payment-verified", paymentPayload: payload, paymentRequirements: { scheme: "exact", network: "eip155:8453", asset: "0xusdc", amount: "5000000", payTo: "0x1", maxTimeoutSeconds: 300, extra: {} }, cancellationDispatcher: { cancel: async () => null } }
+      ? { type: "payment-verified", paymentPayload: payload, paymentRequirements: { scheme: "exact", network: "eip155:8453", asset: "0xusdc", amount: "1000000", payTo: "0x1", maxTimeoutSeconds: 300, extra: {} }, cancellationDispatcher: { cancel: async () => null } }
       : { type: "payment-error", response: { status: 402, headers: {}, body: { error: "payment required" } } },
     processSettlement: async () => { throw new Error("facilitator timeout"); },
   } as never;
@@ -92,7 +92,7 @@ describe("paid scan", () => {
     const required = r.headers.get("PAYMENT-REQUIRED");
     expect(required).toBeTruthy();
     const decoded = JSON.parse(Buffer.from(String(required), "base64").toString("utf8")) as { accepts: Array<{ scheme: string; network: string; amount: string; asset: string; payTo: string }> };
-    expect(decoded.accepts[0]).toMatchObject({ scheme: "exact", network: "eip155:8453", amount: "5000000", payTo: PAY_TO });
+    expect(decoded.accepts[0]).toMatchObject({ scheme: "exact", network: "eip155:8453", amount: "1000000", payTo: PAY_TO });
   });
 
   it("a facilitator that cannot be reached is a 503, a facilitator that supports the wrong network is a 500", async () => {
@@ -138,7 +138,7 @@ describe("paid scan", () => {
     const gate = new Promise<void>((resolve) => { releaseGate = resolve; });
     const gatedServer = {
       processHTTPRequest: async (cc: { paymentHeader?: string }) => cc.paymentHeader
-        ? { type: "payment-verified", paymentPayload: payload, paymentRequirements: { scheme: "exact", network: "eip155:8453", asset: "0xusdc", amount: "5000000", payTo: "0x1", maxTimeoutSeconds: 300, extra: {} }, cancellationDispatcher: { cancel: async () => null } }
+        ? { type: "payment-verified", paymentPayload: payload, paymentRequirements: { scheme: "exact", network: "eip155:8453", asset: "0xusdc", amount: "1000000", payTo: "0x1", maxTimeoutSeconds: 300, extra: {} }, cancellationDispatcher: { cancel: async () => null } }
         : { type: "payment-error", response: { status: 402, headers: {}, body: { error: "payment required" } } },
       processSettlement: async () => {
         settlementCalls++;

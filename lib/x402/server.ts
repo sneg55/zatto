@@ -6,7 +6,7 @@ import type { AppContext } from "../http/context";
 import { createJob, readJobByPayment, setJobPayment, claimJobForSettlement, failSettlingJob } from "../db/queries";
 import { triggerStep } from "../http/context";
 
-export const SCAN_PRICE_USDC_UNITS = "5000000";
+export const SCAN_PRICE_USDC_UNITS = "1000000";
 export const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 export const SCAN_ROUTE_PATTERN = "/api/scan/[chain]";
 
