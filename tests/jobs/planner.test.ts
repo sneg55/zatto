@@ -23,12 +23,32 @@ describe("planJob", () => {
       throw new Error("unexpected " + url);
     });
     const client = new NansenClient({ db, apiKey: "k", fetch: f, now: () => now, budget: 3000, sleep: async () => {} });
-    const full = await planJob(db, client, "base", now, 10_000, 25);
+    const full = await planJob(db, client, "base", now, 10_000);
     expect(full.candidates.map((c) => c.wallet)).toEqual(["0xa", "0xb"]);
-    expect(full.candidates[0].buckets.length).toBe(60);
-    expect(full.plannedRequests).toBeGreaterThan(60);
-    const capped = await planJob(db, client, "base", now, 20, 25);
+    expect(full.candidates[0].buys.length).toBe(10);
+    expect(full.candidates[0].buckets.length).toBe(30);
+    expect(full.plannedRequests).toBe(5 + 30 * 2 + 10 + 3 * 2 + 1);
+    const capped = await planJob(db, client, "base", now, 20);
     expect(capped.candidates.find((c) => c.wallet === "0xa")?.dropped).toMatch(/cap/);
     expect(capped.candidates.find((c) => c.wallet === "0xb")?.dropped).toBeUndefined();
+  });
+
+  it("charges one candle call per buy so the planned figure bounds what the step actually spends", async () => {
+    const db = openTestDb();
+    const f = fetchStub((url, init) => {
+      const body = JSON.parse(String(init.body));
+      if (url.endsWith("token-screener")) return { status: 200, body: { data: [{ token_address: "0xT1" }], pagination: { page: 1, per_page: 30, is_last_page: true } } };
+      if (url.endsWith("tgm/dex-trades")) return { status: 200, body: { data: [trade("0xA")], pagination: { page: 1, per_page: 1000, is_last_page: true } } };
+      if (url.endsWith("profiler/dex-trades")) {
+        void body;
+        return { status: 200, body: { data: [prof("0xtok", "2026-09-14T10:00:00Z"), prof("0xtok", "2026-09-14T11:00:00Z"), prof("0xtok", "2026-09-14T12:00:00Z")], pagination: { page: 1, per_page: 100, is_last_page: true } } };
+      }
+      throw new Error("unexpected " + url);
+    });
+    const client = new NansenClient({ db, apiKey: "k", fetch: f, now: () => now, budget: 3000, sleep: async () => {} });
+    const plan = await planJob(db, client, "base", now, 10_000);
+    expect(plan.candidates[0].buys.length).toBe(3);
+    expect(plan.candidates[0].buckets.length).toBe(5);
+    expect(plan.plannedRequests).toBe(3 + 5 * 2 + 3);
   });
 });

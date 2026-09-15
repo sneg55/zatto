@@ -101,7 +101,8 @@ Constants live in `lib/score/constants.ts`. They are choices made for this build
 | `MIN_USABLE_BUYS` | 5 | Below this many usable buys, the wallet's verdict is `THIN` |
 | `MIN_GROUP` | 3 | Below this many mature buys in the crowded or the uncrowded group, that group's median return is `insufficient` rather than stated |
 | `LOOKBACK_DAYS` | 30 | How far back qualifying buys are pulled for a wallet |
-| `MAX_BUYS_PER_WALLET` | 20 | The most recent qualifying buys kept per wallet |
+| `MAX_BUYS_PER_WALLET` | 10 | The most recent qualifying buys kept per wallet |
+| `TOP_WALLETS` | 10 | How many Smart Money wallets a scan run scores, ranked by buy count on the discovered tokens |
 | `MATURITY_MINUTES` | 15 | How long after an hour bucket or a candle minute Zatto waits before treating it as final, to allow for late-indexed trades |
 
 What the code does today: an hour bucket is fetched from `tgm/dex-trades` up to 3 pages of 1,000 rows; a bucket that still needs a 4th page, or whose stored rows exceed 1,500,000 bytes, is marked capped and every buy that needs it becomes unusable. A `tgm/token-ohlcv` minute with no matching candle in the response is recorded as a `candle_gap` row (`missing`, `truncated`, or `pending`) rather than treated as a zero return. This section has not been filled in with measured request counts or row counts from a real run. No `NANSEN_API_KEY` has been available to run `scripts/proof.ts` against the live API yet; those numbers replace this paragraph once a real proof run has happened.

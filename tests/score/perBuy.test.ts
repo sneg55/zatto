@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { scoreBuy, hourKey, neededHours } from "@/lib/score/perBuy";
-import { buckets, closes, crowdedRows, LEADER, T0_ISO } from "../fixtures/synthetic/tape";
+import { buckets, closes, crowdedRows, row, LEADER, T0_ISO } from "../fixtures/synthetic/tape";
 
 const buy = { chain: "base", wallet: LEADER, token: "0xtok", tx: "0xtx00xleader", ts: T0_ISO, usd: 100, price: 1.0 };
 const std = closes([[0, 1.0], [1, 1.05], [60, 1.2], [1440, 0.9]]);
@@ -61,5 +61,15 @@ describe("scoreBuy", () => {
   it("hour helpers", () => {
     expect(hourKey("2026-09-10T14:03:11.000Z")).toBe("2026-09-10T14");
     expect(neededHours("2026-09-10T14:03:11.000Z")).toEqual(["2026-09-10T13", "2026-09-10T14", "2026-09-10T15"]);
+  });
+
+  it("a trader whose first loaded buy precedes t0 is not new, even outside the baseline window", () => {
+    const early = [...crowdedRows, row(-3730, "0xearly"), row(300, "0xearly")];
+    const s = scoreBuy({ buy, buckets: buckets(early), closes: std });
+    expect(s.baselineRate).toBe(3);
+    expect(s.newBuyers).toEqual({ m10: 5, m30: 7, m60: 11 });
+    const onlyAfter = [...crowdedRows, row(300, "0xlater")];
+    const t = scoreBuy({ buy, buckets: buckets(onlyAfter), closes: std });
+    expect(t.newBuyers).toEqual({ m10: 6, m30: 8, m60: 12 });
   });
 });

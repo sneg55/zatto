@@ -1,10 +1,9 @@
 import type { D1Like } from "../db/d1";
 import type { NansenClient } from "../nansen/client";
 import { fetchScreenerTokens, fetchSmartMoneyBuyers, fetchWalletBuys } from "../nansen/endpoints";
+import { TOP_WALLETS } from "../score/constants";
 import type { Candidate } from "./types";
 import { bucketsFor, countMissingBuckets } from "./scoreWallet";
-
-export const TOP_WALLETS = 25;
 
 export async function planJob(db: D1Like, client: NansenClient, chain: string, now: Date, requestCap: number, topWallets = TOP_WALLETS): Promise<{ candidates: Candidate[]; plannedRequests: number }> {
   const tokens = await fetchScreenerTokens(client, chain);
@@ -23,7 +22,7 @@ export async function planJob(db: D1Like, client: NansenClient, chain: string, n
   const missing = new Map<string, number>();
   for (const c of candidates) missing.set(c.wallet, await countMissingBuckets(db, chain, c.buckets));
   const spent = client.requests;
-  const plan = () => spent + candidates.filter((c) => !c.dropped).reduce((sum, c) => sum + (missing.get(c.wallet) ?? 0) * 2 + Math.ceil(new Set(c.buys.map((b) => b.token)).size / 10), 0);
+  const plan = () => spent + candidates.filter((c) => !c.dropped).reduce((sum, c) => sum + (missing.get(c.wallet) ?? 0) * 2 + c.buys.length, 0);
   let planned = plan();
   while (planned > requestCap) {
     const live = candidates.filter((c) => !c.dropped);

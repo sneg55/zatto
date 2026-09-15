@@ -26,8 +26,10 @@ export function scoreBuy({ buy, buckets, closes }: BuyInput): BuyScore {
   const prior = new Set(buys.filter((r) => r.ms >= t0 - 3_600_000 && r.ms < t0).map((r) => r.trader));
   const baselineRate = prior.size;
 
+  const firstBuy = new Map<string, number>();
+  for (const r of buys) if (!firstBuy.has(r.trader)) firstBuy.set(r.trader, r.ms);
   const firstAfter = new Map<string, number>();
-  for (const r of buys) if (r.ms >= t0 && !prior.has(r.trader) && !firstAfter.has(r.trader)) firstAfter.set(r.trader, r.ms);
+  for (const [trader, ms] of firstBuy) if (ms >= t0) firstAfter.set(trader, ms);
   const within = (sec: number) => [...firstAfter.values()].filter((ms) => ms < t0 + sec * 1000).length;
   const newBuyers = { m10: within(600), m30: within(1800), m60: within(3600) };
   const fastShare = newBuyers.m60 === 0 ? null : within(FAST_SECONDS) / newBuyers.m60;

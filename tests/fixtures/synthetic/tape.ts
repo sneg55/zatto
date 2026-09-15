@@ -1,7 +1,7 @@
 import type { TapeBucket, TapeRow } from "@/lib/score/types";
 
 const T0 = Date.parse("2026-09-10T14:03:11Z");
-const row = (offsetSec: number, trader: string, action: "BUY" | "SELL" = "BUY", price = 1): TapeRow =>
+export const row = (offsetSec: number, trader: string, action: "BUY" | "SELL" = "BUY", price = 1): TapeRow =>
   [new Date(T0 + offsetSec * 1000).toISOString(), trader, action, 100, price, `0xtx${offsetSec}${trader}`, null];
 
 export const LEADER = "0xleader";
