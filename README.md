@@ -128,9 +128,13 @@ Constants live in `lib/score/constants.ts`. They are choices made for this build
 
 What the code does today: an hour bucket is fetched from `tgm/dex-trades` up to 3 pages of 1,000 rows; a bucket that still needs a 4th page, or whose stored rows exceed 1,500,000 bytes, is marked capped and every buy that needs it becomes unusable. A `tgm/token-ohlcv` minute with no candle at that exact minute is resolved to the nearest earlier candle within `CARRY_FORWARD_MAX_MINUTES`; past that bound, or with no earlier candle at all, it is recorded as a `candle_gap` row (`missing`, `truncated`, or `pending`) rather than treated as a zero return.
 
-Measured on run `manual-base-3` against the live API on 2026-09-15, the run published at `/scan/base/manual-base-3`: 10 wallets scored from 12 discovered tokens for 14 requests on a warm cache, 34 buys scored across 24 distinct token minutes. The burst ratio ran a median of 1.04x, 3.15x at the 90th percentile and 17.57x at the top, and 6 of the 34 buys cleared 3x. Entering one minute after those crowded buys returned a median +98.5% at 24 hours against -12.3% after the 28 quiet ones, and the crowded side is 6 buys over 2 token minutes on a single token, so read it as one swarm rather than six independent observations.
+Measured on run `manual-base-6` against the live API on 2026-09-15, published at `/scan/base/manual-base-6`: 30 wallets discovered across 24 screener tokens and scored for 458 requests, giving 162 scored buys over 120 distinct token minutes on 42 tokens.
 
-Three of the ten wallets on that board carry byte-identical buy lists under different transaction hashes: the same tokens, the same minutes, the same returns. They are a genuine address cluster, not a duplicated row, and the scan page labels them as one.
+The burst ratio ran a median of 1.02x, 2.64x at the 75th percentile, 17.00x at the 90th and 38.50x at the top. Across the five bands the run put 74 buys under 1x, 37 between 1 and 2x, 18 between 2 and 3x, 12 between 3 and 5x and 21 at 5x or more, so 33 of 162 cleared the 3x threshold. Entering one minute after those crowded buys returned a median +39.8% at 24 hours, against -1.7% after the 129 quiet ones.
+
+The crowding is concentrated rather than spread: 10 of the 42 tokens account for every crowded buy. LOTTO carried 17 of them over 35 scored buys and returned a median +106.6%, and `$POOP` drew a crowd on all 8 of its buys at a median burst of 17.00x. No wallet was CROWDED, because that needs more than half of one wallet's own buys to draw a crowd and the highest was well under it.
+
+Three of the thirty wallets carry byte-identical buy lists under different transaction hashes: the same tokens, the same minutes, the same returns. They are a genuine address cluster, not a duplicated row, and the scan page labels them as one.
 
 ## Endpoints used
 
