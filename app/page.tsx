@@ -38,7 +38,9 @@ export default async function Home() {
             <WalletLookup chain="base" />
           </div>
           <p className="link-row" style={{ marginTop: 20, marginBottom: 0 }}>
-            <Link href="/scan/base">Or read the Base leaderboard</Link>
+            <Link href="/copied/base">Or see who gets copied most</Link>
+            <span className="divider-dot">&middot;</span>
+            <Link href="/scan/base">Base leaderboard</Link>
             <span className="divider-dot">&middot;</span>
             <Link href="#method">How it measures</Link>
           </p>

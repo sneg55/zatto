@@ -20,6 +20,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="shell site-header-inner">
             <Link href="/" className="wordmark">Zatto</Link>
             <nav className="site-nav">
+              <Link href="/copied/base">Most copied</Link>
               <Link href="/scan/base">Base leaderboard</Link>
               <Link href="/#method">How it measures</Link>
             </nav>

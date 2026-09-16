@@ -273,6 +273,21 @@ export async function readScoresForRun(db: D1Like, chain: string, runId: string)
   return (await db.prepare("SELECT result FROM scores WHERE chain = ? AND run_id = ?").bind(chain, runId).all<{ result: string }>()).results.map((r) => JSON.parse(r.result) as WalletScore);
 }
 
+export async function readLatestScorePerWallet(db: D1Like, chain: string): Promise<Array<{ wallet: string; runId: string; computedAt: string; score: WalletScore }>> {
+  const rows = (await db.prepare(
+    `SELECT s.wallet, s.run_id, s.computed_at, s.result FROM scores s
+     JOIN (SELECT wallet, MAX(computed_at) AS newest FROM scores WHERE chain = ? AND run_id NOT LIKE 'zatto:scored:%' GROUP BY wallet) x
+       ON x.wallet = s.wallet AND x.newest = s.computed_at
+     WHERE s.chain = ? AND s.run_id NOT LIKE 'zatto:scored:%'`
+  ).bind(chain, chain).all<{ wallet: string; run_id: string; computed_at: string; result: string }>()).results;
+  const byWallet = new Map<string, { wallet: string; runId: string; computedAt: string; score: WalletScore }>();
+  for (const r of rows) {
+    if (byWallet.has(r.wallet)) continue;
+    byWallet.set(r.wallet, { wallet: r.wallet, runId: r.run_id, computedAt: r.computed_at, score: JSON.parse(r.result) as WalletScore });
+  }
+  return [...byWallet.values()];
+}
+
 export async function readScore(db: D1Like, chain: string, wallet: string, runId: string | null): Promise<{ score: WalletScore; runId: string; computedAt: string } | null> {
   const r = runId
     ? await db.prepare("SELECT result, run_id, computed_at FROM scores WHERE chain = ? AND wallet = ? AND run_id = ?").bind(chain, wallet, runId).first<{ result: string; run_id: string; computed_at: string }>()
