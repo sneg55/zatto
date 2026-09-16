@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db/d1";
 import { publishedJobs, readJob, readScoresForRun, readTokenNames } from "@/lib/db/queries";
 import { clusters, pooledRun, sortLeaderboard, tokenBreakdown } from "@/lib/score/perWallet";
 import { fmtDateTime, fmtRatio, shortAddr } from "@/lib/format";
-import { explorerToken, isSupportedChain } from "@/lib/chains";
+import { dexscreenerToken, explorerToken, isSupportedChain, nansenToken } from "@/lib/chains";
 import type { Candidate } from "@/lib/jobs/types";
 import { StatusTag } from "@/app/_components/Tag";
 import { Delta } from "@/app/_components/Delta";
@@ -176,6 +176,10 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
                       <a href={explorerToken(chain, t.token)} target="_blank" rel="noopener noreferrer" className={symbols.get(t.token) ? undefined : "wallet-addr"}>
                         {symbols.get(t.token) ?? shortAddr(t.token)}
                       </a>
+                      <span className="token-links">
+                        <a href={nansenToken(chain, t.token)} target="_blank" rel="noopener noreferrer">Nansen</a>
+                        <a href={dexscreenerToken(chain, t.token)} target="_blank" rel="noopener noreferrer">Dexscreener</a>
+                      </span>
                     </td>
                     <td data-label="Scored buys" className="num">{t.buys}</td>
                     <td data-label="Entries" className="num">{t.events}</td>

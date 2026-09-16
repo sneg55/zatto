@@ -704,3 +704,29 @@ th.num .th-sort {
     gap: 8px;
   }
 }
+
+.token-links {
+  display: inline-flex;
+  gap: 10px;
+  margin-left: 12px;
+  vertical-align: baseline;
+}
+
+.token-links a {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--graphite);
+  text-decoration: none;
+  border-bottom: 1px solid var(--stone);
+}
+
+.token-links a:hover {
+  color: var(--ink-black);
+  border-bottom-color: var(--ink-black);
+}
+
+@media (max-width: 760px) {
+  table.data-cards .token-links {
+    margin-left: 10px;
+  }
+}

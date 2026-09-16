@@ -22,3 +22,11 @@ export function explorerTx(chain: string, tx: string): string {
 export function explorerToken(chain: string, token: string): string {
   return `${EXPLORERS[chain as SupportedChain] ?? EXPLORERS.base}/token/${token}`;
 }
+
+export function nansenToken(chain: string, token: string): string {
+  return `https://app.nansen.ai/token-god-mode?tokenAddress=${token}&chain=${chain}`;
+}
+
+export function dexscreenerToken(chain: string, token: string): string {
+  return `https://dexscreener.com/${chain}/${token}`;
+}

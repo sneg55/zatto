@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { explorerToken, explorerTx, isAddress, isSupportedChain } from "@/lib/chains";
+import { dexscreenerToken, explorerToken, explorerTx, isAddress, isSupportedChain, nansenToken } from "@/lib/chains";
 
 describe("chain and address guards", () => {
   it("accepts base and rejects a chain Zatto does not scan", () => {
@@ -20,5 +20,13 @@ describe("chain and address guards", () => {
   it("builds explorer links for the chain", () => {
     expect(explorerTx("base", "0xabc")).toBe("https://basescan.org/tx/0xabc");
     expect(explorerToken("base", "0xdef")).toBe("https://basescan.org/token/0xdef");
+  });
+
+  it("builds a Nansen token page link with the parameter names Nansen uses", () => {
+    expect(nansenToken("base", "0xdef")).toBe("https://app.nansen.ai/token-god-mode?tokenAddress=0xdef&chain=base");
+  });
+
+  it("builds a Dexscreener link on the token's own chain", () => {
+    expect(dexscreenerToken("base", "0xdef")).toBe("https://dexscreener.com/base/0xdef");
   });
 });
