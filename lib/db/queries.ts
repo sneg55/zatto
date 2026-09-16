@@ -1,5 +1,5 @@
 import type { D1Like } from "./d1";
-import type { Buy, TapeRow, WalletScore } from "../score/types";
+import type { Buy, BuyScore, TapeRow, WalletScore } from "../score/types";
 import type { ScanJob, Candidate } from "../jobs/types";
 
 export async function countCallsToday(db: D1Like, dayStartIso: string): Promise<{ reserved: number; ok: number; failed: number }> {
@@ -286,6 +286,23 @@ export async function readLatestScorePerWallet(db: D1Like, chain: string): Promi
     byWallet.set(r.wallet, { wallet: r.wallet, runId: r.run_id, computedAt: r.computed_at, score: JSON.parse(r.result) as WalletScore });
   }
   return [...byWallet.values()];
+}
+
+export async function readAllScoredBuys(db: D1Like, chain: string): Promise<BuyScore[]> {
+  const rows = (await db.prepare(
+    `SELECT s.result FROM scores s
+     JOIN (SELECT wallet, MAX(computed_at) AS newest FROM scores WHERE chain = ? AND run_id NOT LIKE 'zatto:scored:%' GROUP BY wallet) x
+       ON x.wallet = s.wallet AND x.newest = s.computed_at
+     WHERE s.chain = ? AND s.run_id NOT LIKE 'zatto:scored:%'`
+  ).bind(chain, chain).all<{ result: string }>()).results;
+  const byMinute = new Map<string, BuyScore>();
+  for (const r of rows) {
+    for (const b of (JSON.parse(r.result) as WalletScore).buys) {
+      const key = `${b.token}|${b.ts}`;
+      if (!byMinute.has(key)) byMinute.set(key, b);
+    }
+  }
+  return [...byMinute.values()];
 }
 
 export async function readScore(db: D1Like, chain: string, wallet: string, runId: string | null): Promise<{ score: WalletScore; runId: string; computedAt: string } | null> {

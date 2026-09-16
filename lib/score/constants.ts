@@ -25,3 +25,5 @@ export const FORMING_REQUESTS = 24;
 export const FORMING_SECONDS = 25;
 export const TOKEN_SCAN_ENTRIES = 20;
 export const TOKEN_SCAN_DAYS = 7;
+export const SIGNAL_RATIO = 5;
+export const MIN_RATE_OBSERVATIONS = 10;

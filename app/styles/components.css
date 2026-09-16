@@ -949,3 +949,26 @@ th.num .th-sort {
   margin: -16px 0 0;
   max-width: 54ch;
 }
+
+.signal {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1.32;
+  letter-spacing: -0.01em;
+  color: var(--ink-black);
+  margin: 0;
+  max-width: 56ch;
+}
+
+.signal-quiet {
+  color: var(--graphite);
+}
+
+.signal-band {
+  border: 1px solid var(--ink-black);
+  border-radius: var(--radius);
+  background: var(--stone);
+  padding: 24px 28px;
+  margin: 0 0 32px;
+}

@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db/d1";
-import { latestPublishedJob, readScoresForRun } from "@/lib/db/queries";
+import { latestPublishedJob, readAllScoredBuys, readScoresForRun, readTokenNames } from "@/lib/db/queries";
 import { pooledRun } from "@/lib/score/perWallet";
 import { fmtAge, fmtDateTime, fmtRatio } from "@/lib/format";
 import { Delta } from "@/app/_components/Delta";
 import type { BurstScore } from "@/lib/score/types";
 import { WalletLookup } from "@/app/_components/WalletLookup";
-import { CROWD_RATIO } from "@/lib/score/constants";
+import { CROWD_RATIO, FORMING_WINDOW_HOURS, SIGNAL_RATIO } from "@/lib/score/constants";
+import { baseRates, rateFor } from "@/lib/score/baseRates";
+import { NoSignal, Signal } from "@/app/_components/Signal";
+import { shortAddr } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +20,14 @@ async function latest() {
   const rows = await readScoresForRun(db, "base", job.run_id);
   if (rows.length === 0) return null;
   const forming = JSON.parse(job.forming ?? "[]") as BurstScore[];
-  return { job, pooled: pooledRun(rows), forming, wallets: rows.length, crowdedWallets: rows.filter((r) => r.verdict === "CROWDED").length };
+  const rates = baseRates(await readAllScoredBuys(db, "base"));
+  const live = forming.filter((f) => f.burst >= SIGNAL_RATIO).sort((a, b) => (a.ts < b.ts ? 1 : -1))[0] ?? null;
+  const symbols = live ? await readTokenNames(db, "base", [live.token]) : new Map<string, string>();
+  return {
+    job, pooled: pooledRun(rows), forming, rates, live,
+    liveName: live ? symbols.get(live.token) ?? shortAddr(live.token) : null,
+    wallets: rows.length, crowdedWallets: rows.filter((r) => r.verdict === "CROWDED").length,
+  };
 }
 
 export default async function Home() {
@@ -48,11 +58,17 @@ export default async function Home() {
 
         {run ? (
           <aside className="hero-panel">
-            <p className="eyebrow">Latest run</p>
-            <p className="hero-panel-figure">{fmtRatio(run.pooled.burst.p90)}</p>
-            <p className="hero-panel-label">
-              burst at the 90th percentile of {run.pooled.buys} scored entries, highest {fmtRatio(run.pooled.burst.max)}
-            </p>
+            <p className="eyebrow">Right now on Base</p>
+            {run.live && run.liveName ? (
+              <Signal
+                rate={rateFor(run.rates, run.live.burst)}
+                burst={run.live.burst}
+                at={run.live.ts}
+                subject={run.liveName}
+              />
+            ) : (
+              <NoSignal threshold={SIGNAL_RATIO} hours={FORMING_WINDOW_HOURS} subject="the wallets Zatto tracks" />
+            )}
             {comparable ? (
               <p className="hero-panel-note">
                 Entering a minute after a crowded buy returned <Delta value={run.pooled.crowded.median} /> at 24

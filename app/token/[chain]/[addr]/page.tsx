@@ -6,6 +6,9 @@ import { fmtDateTime, fmtSpan, shortAddr } from "@/lib/format";
 import { dexscreenerToken, explorerToken, isAddress, isSupportedChain, nansenToken } from "@/lib/chains";
 import { CROWD_RATIO, TOKEN_SCAN_DAYS, TOKEN_SCAN_ENTRIES } from "@/lib/score/constants";
 import type { TokenScan } from "@/lib/liveToken";
+import { baseRates, rateFor } from "@/lib/score/baseRates";
+import { readAllScoredBuys } from "@/lib/db/queries";
+import { Signal } from "@/app/_components/Signal";
 import { TokenBoard } from "@/app/_components/TokenBoard";
 import { Forming } from "@/app/_components/Forming";
 import { ScanButton } from "./ScanButton";
@@ -22,6 +25,13 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
   const name = scan?.symbol ?? shortAddr(token);
   const symbols = new Map(scan?.symbol ? [[token, scan.symbol]] : []);
   const crowded = scan ? scan.forming.filter((f) => f.crowded).length + (scan.stat?.crowded ?? 0) : 0;
+  const hardest = scan
+    ? [
+        ...scan.forming.map((f) => ({ burst: f.burst, ts: f.ts })),
+        ...(scan.stat?.entries ?? []).map((e) => ({ burst: e.burst, ts: e.ts })),
+      ].sort((a, b) => b.burst - a.burst)[0] ?? null
+    : null;
+  const rates = scan ? baseRates(await readAllScoredBuys(db, chain)) : [];
   const settled = scan?.stat?.buys ?? 0;
 
   return (
@@ -68,6 +78,12 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
               <span className="meta-value muted">{fmtDateTime(snap!.computedAt)}</span>
             </div>
           </div>
+
+          {hardest ? (
+            <section className="signal-band">
+              <Signal rate={rateFor(rates, hardest.burst)} burst={hardest.burst} at={hardest.ts} subject={name} />
+            </section>
+          ) : null}
 
           <p className="page-verdict">
             Smart Money bought {name} {scan.smartMoneyBuys}{" "}
