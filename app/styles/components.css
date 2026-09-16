@@ -478,6 +478,7 @@ th.num .th-sort {
   border-radius: var(--radius);
   background: var(--bone);
   padding: 20px;
+  max-width: 560px;
 }
 
 .lookup-label {
@@ -729,4 +730,30 @@ th.num .th-sort {
   table.data-cards .token-links {
     margin-left: 10px;
   }
+}
+
+.pay-scan {
+  margin: 20px 0 4px;
+}
+
+.pay-error {
+  color: var(--ink-black);
+  border-left: 2px solid var(--ink-black);
+  padding-left: 10px;
+}
+
+.terminal-fallback {
+  margin-top: 24px;
+  border-top: 1px solid var(--stone);
+  padding-top: 16px;
+}
+
+.terminal-fallback summary {
+  font-size: 13px;
+  color: var(--graphite);
+  cursor: pointer;
+}
+
+.terminal-fallback summary:hover {
+  color: var(--ink-black);
 }

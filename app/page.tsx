@@ -4,6 +4,7 @@ import { latestPublishedJob, readScoresForRun } from "@/lib/db/queries";
 import { pooledRun } from "@/lib/score/perWallet";
 import { fmtDateTime, fmtRatio } from "@/lib/format";
 import { Delta } from "@/app/_components/Delta";
+import { WalletLookup } from "@/app/_components/WalletLookup";
 import { CROWD_RATIO } from "@/lib/score/constants";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +31,12 @@ export default async function Home() {
             Point Zatto at a Smart Money wallet and it tells you how many new buyers show up after it buys, how
             fast they arrive, and what buying one minute behind it would have returned.
           </p>
-          <p className="link-row" style={{ marginTop: 28 }}>
-            <Link href="/scan/base" className="btn">Base leaderboard</Link>
+          <div style={{ marginTop: 28 }}>
+            <WalletLookup chain="base" />
+          </div>
+          <p className="link-row" style={{ marginTop: 20, marginBottom: 0 }}>
+            <Link href="/scan/base">Or read the Base leaderboard</Link>
+            <span className="divider-dot">&middot;</span>
             <Link href="#method">How it measures</Link>
           </p>
         </div>

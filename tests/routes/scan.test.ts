@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
 import { openTestDb } from "../helpers/d1";
-import { handlePaidScan, resetHttpServerCache } from "@/lib/x402/server";
+import { BASE_USDC, BASE_USDC_EIP712, buildHttpServer, handlePaidScan, resetHttpServerCache, SCAN_ROUTE_PATTERN } from "@/lib/x402/server";
 import { readJob } from "@/lib/db/queries";
 import type { AppContext } from "@/lib/http/context";
 
@@ -164,5 +164,21 @@ describe("paid scan", () => {
     expect(job?.status).toBe("settled");
     expect(job?.payment_tx).toBe("0xtxA");
     expect(job?.error).toBeNull();
+  });
+});
+
+describe("payment terms the 402 advertises", () => {
+  it("names the EIP-712 domain of the asset, without which no client can build a payload", async () => {
+    resetHttpServerCache();
+    const built = buildHttpServer({ FACILITATOR_URL: "https://f", X402_PAY_TO: PAY_TO }, SCAN_ROUTE_PATTERN, supportsExactOnBase());
+    const routes = (built as unknown as { routes: Record<string, { accepts: { extra?: Record<string, unknown>; asset: string } }> }).routes
+      ?? (built as unknown as { config: Record<string, { accepts: { extra?: Record<string, unknown>; asset: string } }> }).config;
+    const accepts = routes?.[SCAN_ROUTE_PATTERN]?.accepts;
+    expect(accepts?.extra).toEqual(BASE_USDC_EIP712);
+  });
+
+  it("carries the domain Base USDC actually reports on chain", () => {
+    expect(BASE_USDC_EIP712).toEqual({ name: "USD Coin", version: "2" });
+    expect(BASE_USDC).toBe("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913");
   });
 });

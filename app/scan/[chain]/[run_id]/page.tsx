@@ -8,7 +8,6 @@ import { dexscreenerToken, explorerToken, isSupportedChain, nansenToken } from "
 import type { Candidate } from "@/lib/jobs/types";
 import { StatusTag } from "@/app/_components/Tag";
 import { Delta } from "@/app/_components/Delta";
-import { WalletLookup } from "@/app/_components/WalletLookup";
 import { PaidScan } from "@/app/_components/PaidScan";
 import { Leaderboard } from "./Leaderboard";
 import { CROWD_RATIO } from "@/lib/score/constants";
@@ -200,10 +199,6 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
           Not scored under the request cap: {dropped.map((c) => `${shortAddr(c.wallet)} (${c.dropped})`).join(", ")}
         </p>
       ) : null}
-
-      <section className="section">
-        <WalletLookup chain={chain} />
-      </section>
 
       <PaidScan chain={chain} baseUrl={baseUrl} />
 

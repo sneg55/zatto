@@ -88,7 +88,9 @@ Pay it with a funded Base private key:
 PAYER_KEY=0x... npm run pay -- https://<your-host>/api/scan/base
 ```
 
-The scan page carries the payment terms, the endpoint and the exact command. Payment itself is signed outside the browser: Zatto never holds a key and there is no wallet connector in the UI.
+The scan page pays from a browser wallet. It reads the terms out of the 402, asks the wallet to sign the EIP-3009 transfer authorisation (a signature, not a transaction, so it costs no gas), retries the request with the payment, and opens the run the moment settlement returns. A terminal path stays available behind a disclosure on the same panel.
+
+The 402 advertises the asset's EIP-712 domain in `extra`, which Base USDC reports on chain as `name` "USD Coin" and `version` "2". Without it a client cannot build a payload at all, and the endpoint answers every payment attempt with a domain error.
 
 `scripts/pay.ts` is a small, public script on `@x402/fetch` and `@x402/evm`. It signs the payment with `PAYER_KEY` and retries the request. No dependency on private code.
 

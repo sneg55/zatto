@@ -8,6 +8,7 @@ import { triggerStep } from "../http/context";
 
 export const SCAN_PRICE_USDC_UNITS = "1000000";
 export const BASE_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+export const BASE_USDC_EIP712 = { name: "USD Coin", version: "2" };
 export const SCAN_ROUTE_PATTERN = "/api/scan/[chain]";
 
 export interface X402Env { FACILITATOR_URL: string; X402_PAY_TO: string }
@@ -17,7 +18,7 @@ export function buildHttpServer(env: X402Env, routePattern: string, facilitator?
   const server = new x402ResourceServer(client).register("eip155:8453", new ExactEvmScheme());
   return new x402HTTPResourceServer(server, {
     [routePattern]: {
-      accepts: { scheme: "exact", network: "eip155:8453", payTo: env.X402_PAY_TO, price: { amount: SCAN_PRICE_USDC_UNITS, asset: BASE_USDC }, maxTimeoutSeconds: 300 },
+      accepts: { scheme: "exact", network: "eip155:8453", payTo: env.X402_PAY_TO, price: { amount: SCAN_PRICE_USDC_UNITS, asset: BASE_USDC }, maxTimeoutSeconds: 300, extra: BASE_USDC_EIP712 },
       description: "Run a Zatto Smart Money crowding scan now",
       mimeType: "application/json",
     },
