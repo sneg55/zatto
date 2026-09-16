@@ -890,3 +890,10 @@ th.num .th-sort {
   max-width: 62ch;
   margin: 16px 0 0;
 }
+
+.forming {
+  border: 1px solid var(--ink-black);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin: 0 0 32px;
+}

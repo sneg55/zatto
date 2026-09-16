@@ -27,6 +27,13 @@ export interface BuyScore {
   exclusion: "capped" | "immature" | "no-price" | null;
 }
 
+export interface BurstScore {
+  wallet: string; token: string; tx: string; ts: string;
+  baselineRate: number; newBuyers10: number; burst: number; crowded: boolean;
+  fastShare: number | null;
+  settled: boolean; capped: boolean;
+}
+
 export type Verdict = "THIN" | "CROWDED" | "QUIET";
 export type GroupStat = { n: number; median: number | null; insufficient: boolean };
 

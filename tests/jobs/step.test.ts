@@ -3,7 +3,7 @@ import { openTestDb } from "../helpers/d1";
 import { fetchStub } from "../helpers/fetchStub";
 import { NansenClient } from "@/lib/nansen/client";
 import { runScanStep } from "@/lib/jobs/step";
-import { createJob, readJob, readScore, saveJobPlan } from "@/lib/db/queries";
+import { createJob, readJob, readScore, saveJobPlan, upsertBuys } from "@/lib/db/queries";
 import type { Candidate } from "@/lib/jobs/types";
 
 const now = new Date("2026-09-15T12:00:00Z");
@@ -84,5 +84,59 @@ describe("runScanStep", () => {
     await db.prepare("INSERT INTO scores (chain, wallet, run_id, computed_at, provisional, result) VALUES ('base','0xa','zatto:scored:r1:0xa','2026-09-15T12:00:00.000Z',1,'[]')").run();
     const latest = await readScore(db, "base", "0xa", null);
     expect(latest?.runId).toBe("r0");
+  });
+});
+
+describe("the forming pass", () => {
+  const fresh = { chain: "base", wallet: "0xa", token: "0xfresh", tx: "0xfreshtx", ts: "2026-09-15T10:00:00.000Z", usd: 10, price: 1 };
+
+  function tapeClient(db: ReturnType<typeof openTestDb>, rows: unknown[]) {
+    const f = fetchStub((url) =>
+      url.endsWith("token-ohlcv")
+        ? okOhlcv
+        : { status: 200, body: { data: rows, pagination: { page: 1, per_page: 1000, is_last_page: true } } });
+    return new NansenClient({ db, apiKey: "k", fetch: f, now: () => now, budget: 100_000, runId: "r1", sleep: async () => {} });
+  }
+
+  const trade = (offsetSec: number, trader: string) => ({
+    block_timestamp: new Date(Date.parse(fresh.ts) + offsetSec * 1000).toISOString(),
+    trader_address: trader, action: "BUY", estimated_value_usd: 10, estimated_swap_price_usd: 1,
+    transaction_hash: `0x${trader}${offsetSec}`, trader_address_label: null,
+  });
+
+  it("scores the burst on a buy two hours old that no return could reach yet", async () => {
+    const db = openTestDb();
+    await createJob(db, { runId: "r1", chain: "base", source: "cron", status: "settled", now: now.toISOString() });
+    await saveJobPlan(db, "r1", [cand("0xa", 1)], 100, now.toISOString());
+    await upsertBuys(db, [fresh], now.toISOString());
+    const rows = [trade(-1800, "0xprior"), trade(0, "0xa"), trade(5, "0xc1"), trade(30, "0xc2"), trade(90, "0xc3"), trade(300, "0xc4"), trade(400, "0xc5"), trade(500, "0xc6"), trade(900, "0xlate")];
+    let done = false;
+    for (let i = 0; i < 20 && !done; i++) done = (await runScanStep(db, tapeClient(db, rows), "r1", now, { requests: 200, planRequests: 10_000, seconds: 100 })).done;
+    expect(done).toBe(true);
+    const forming = JSON.parse((await readJob(db, "r1"))!.forming!) as Array<{ token: string; newBuyers10: number; crowded: boolean; settled: boolean }>;
+    expect(forming).toHaveLength(1);
+    expect(forming[0]).toMatchObject({ token: "0xfresh", newBuyers10: 6, crowded: true, settled: true });
+  });
+
+  it("leaves out a buy too recent for its burst to have settled", async () => {
+    const db = openTestDb();
+    await createJob(db, { runId: "r1", chain: "base", source: "cron", status: "settled", now: now.toISOString() });
+    await saveJobPlan(db, "r1", [cand("0xa", 1)], 100, now.toISOString());
+    await upsertBuys(db, [{ ...fresh, ts: new Date(now.getTime() - 5 * 60_000).toISOString() }], now.toISOString());
+    let done = false;
+    for (let i = 0; i < 20 && !done; i++) done = (await runScanStep(db, tapeClient(db, []), "r1", now, { requests: 200, planRequests: 10_000, seconds: 100 })).done;
+    expect(done).toBe(true);
+    expect(JSON.parse((await readJob(db, "r1"))!.forming!)).toEqual([]);
+  });
+
+  it("leaves out a buy older than the forming window", async () => {
+    const db = openTestDb();
+    await createJob(db, { runId: "r1", chain: "base", source: "cron", status: "settled", now: now.toISOString() });
+    await saveJobPlan(db, "r1", [cand("0xa", 1)], 100, now.toISOString());
+    await upsertBuys(db, [{ ...fresh, ts: "2026-09-12T10:00:00.000Z" }], now.toISOString());
+    let done = false;
+    for (let i = 0; i < 20 && !done; i++) done = (await runScanStep(db, tapeClient(db, []), "r1", now, { requests: 200, planRequests: 10_000, seconds: 100 })).done;
+    expect(done).toBe(true);
+    expect(JSON.parse((await readJob(db, "r1"))!.forming!)).toEqual([]);
   });
 });

@@ -7,6 +7,7 @@ export interface ScanJob {
   created_at: string; started_at: string | null; finished_at: string | null;
   candidates: string; cursor: number; bucket_cursor: number; planned_requests: number; used_requests: number;
   attempts: number; lease_until: string | null; error: string | null; payment_id: string | null; payment_tx: string | null; published: number;
+  forming: string | null;
 }
 export interface StepBudgets { requests: number; planRequests: number; seconds: number }
 export const DEFAULT_BUDGETS: StepBudgets = { requests: 60, planRequests: 86, seconds: 100 };

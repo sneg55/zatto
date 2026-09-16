@@ -6,11 +6,13 @@ import { clusterGroups, clusters, pooledRun, sortLeaderboard, tokenBreakdown } f
 import { fmtAge, fmtDateTime, fmtRatio, shortAddr } from "@/lib/format";
 import { isSupportedChain } from "@/lib/chains";
 import type { Candidate } from "@/lib/jobs/types";
+import type { BurstScore } from "@/lib/score/types";
 import { StatusTag } from "@/app/_components/Tag";
 import { Delta } from "@/app/_components/Delta";
 import { PaidScan } from "@/app/_components/PaidScan";
 import { Leaderboard } from "./Leaderboard";
 import { TokenBoard } from "./TokenBoard";
+import { Forming } from "./Forming";
 import { CROWD_RATIO } from "@/lib/score/constants";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +47,8 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
   const byToken = tokenBreakdown(rows);
   const crowdedTokens = byToken.filter((t) => t.verdict === "CROWDED");
   const quietTokens = byToken.filter((t) => t.verdict === "QUIET");
-  const symbols = await readTokenNames(db, chain, byToken.map((t) => t.token));
+  const forming = JSON.parse(job.forming ?? "[]") as BurstScore[];
+  const symbols = await readTokenNames(db, chain, [...byToken.map((t) => t.token), ...forming.map((f) => f.token)]);
   const history = (await publishedJobs(db, chain, 6)).filter((j) => j.run_id !== run_id);
   const baseUrl = process.env.PUBLIC_BASE_URL ?? "https://zatto.nsawinyh.workers.dev";
 
@@ -152,6 +155,8 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
           </p>
         ) : null}
       </section>
+
+      {forming.length ? <Forming chain={chain} runId={run_id} rows={forming} symbols={symbols} /> : null}
 
       {pooled.buys ? (
         <section className="band">

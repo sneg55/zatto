@@ -29,6 +29,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ chain: 
       payment_tx: job.payment_tx,
     },
     pooled: pooledRun(rows),
+    forming: JSON.parse(job.forming ?? "[]"),
     clusters: Object.fromEntries(clusters(rows)),
     tokens: tokens.map((t) => ({ ...t, symbol: symbols.get(t.token) ?? null })),
     wallets: rows,

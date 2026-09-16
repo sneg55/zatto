@@ -91,6 +91,25 @@ export async function loadBuys(db: D1Like, chain: string, wallet: string, limit:
   return (await (notAfter ? p.bind(chain, wallet, notAfter, limit) : p.bind(chain, wallet, limit)).all<Buy>()).results;
 }
 
+export async function loadFreshBuys(db: D1Like, chain: string, wallets: string[], since: string, until: string, limit: number): Promise<Buy[]> {
+  if (wallets.length === 0) return [];
+  const out: Buy[] = [];
+  for (let i = 0; i < wallets.length; i += 50) {
+    const slice = wallets.slice(i, i + 50);
+    const rows = await db.prepare(
+      `SELECT chain, wallet, token, tx, ts, usd, price FROM buys
+       WHERE chain = ? AND ts > ? AND ts <= ? AND wallet IN (${slice.map(() => "?").join(",")})
+       ORDER BY ts DESC LIMIT ?`
+    ).bind(chain, since, until, ...slice, limit).all<Buy>();
+    out.push(...rows.results);
+  }
+  return out.sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : a.tx.localeCompare(b.tx))).slice(0, limit);
+}
+
+export async function saveForming(db: D1Like, runId: string, forming: unknown): Promise<void> {
+  await db.prepare("UPDATE scan_jobs SET forming = ? WHERE run_id = ?").bind(JSON.stringify(forming), runId).run();
+}
+
 export async function walletHasBuys(db: D1Like, chain: string, wallet: string): Promise<boolean> {
   const r = await db.prepare("SELECT 1 AS present FROM buys WHERE chain = ? AND wallet = ? LIMIT 1").bind(chain, wallet).first<{ present: number }>();
   return r !== null;
