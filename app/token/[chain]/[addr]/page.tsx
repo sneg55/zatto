@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/d1";
 import { readTokenScan } from "@/lib/db/queries";
-import { fmtDateTime, shortAddr } from "@/lib/format";
+import { fmtDateTime, fmtSpan, shortAddr } from "@/lib/format";
 import { dexscreenerToken, explorerToken, isAddress, isSupportedChain, nansenToken } from "@/lib/chains";
 import { CROWD_RATIO, TOKEN_SCAN_DAYS, TOKEN_SCAN_ENTRIES } from "@/lib/score/constants";
 import type { TokenScan } from "@/lib/liveToken";
@@ -21,6 +21,8 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
   const scan = snap ? (JSON.parse(snap.result) as TokenScan) : null;
   const name = scan?.symbol ?? shortAddr(token);
   const symbols = new Map(scan?.symbol ? [[token, scan.symbol]] : []);
+  const crowded = scan ? scan.forming.filter((f) => f.crowded).length + (scan.stat?.crowded ?? 0) : 0;
+  const settled = scan?.stat?.buys ?? 0;
 
   return (
     <main>
@@ -54,8 +56,12 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
               <span className="meta-value">{scan.wallets.length}</span>
             </div>
             <div className="meta-item">
-              <span className="meta-label">Window</span>
-              <span className="meta-value">{scan.truncated ? `newest ${scan.entries} entries` : `${scan.days} days`}</span>
+              <span className="meta-label">Reaches back</span>
+              <span className="meta-value">{fmtSpan(scan.window?.from ?? null, scan.window?.to ?? null)}</span>
+            </div>
+            <div className="meta-item">
+              <span className="meta-label">Drew a crowd</span>
+              <span className="meta-value">{crowded} of {scan.entries}</span>
             </div>
             <div className="meta-item">
               <span className="meta-label">Scanned</span>
@@ -63,13 +69,24 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
             </div>
           </div>
 
-          {scan.truncated ? (
-            <p className="foot-note" style={{ marginTop: -16 }}>
-              The token returned a full page of Smart Money buys, so this reads the newest{" "}
-              {TOKEN_SCAN_ENTRIES} distinct entries rather than the whole {TOKEN_SCAN_DAYS} days. Repeated swaps by
-              one wallet inside an hour count as one entry.
-            </p>
-          ) : null}
+          <p className="page-verdict">
+            Smart Money bought {name} {scan.smartMoneyBuys}{" "}
+            {scan.smartMoneyBuys === 1 ? "time" : "times"} over the{" "}
+            {fmtSpan(scan.window?.from ?? null, scan.window?.to ?? null)} this scan reaches back, from{" "}
+            {scan.wallets.length} {scan.wallets.length === 1 ? "wallet" : "wallets"}. Repeated swaps by one wallet
+            inside an hour count once, which leaves {scan.entries}{" "}
+            {scan.entries === 1 ? "entry" : "entries"}, and {crowded} of them drew at least {CROWD_RATIO} times the
+            token&apos;s prior-hour buyer rate in the 10 minutes after.
+          </p>
+
+          <p className="foot-note" style={{ marginTop: 12 }}>
+            {settled
+              ? `${settled} of those entries are old enough to carry a settled 24 hour return.`
+              : "None of those entries is old enough yet to carry a settled 24 hour return."}
+            {scan.truncated
+              ? ` This reads the newest ${TOKEN_SCAN_ENTRIES} entries rather than the whole ${TOKEN_SCAN_DAYS} day window, because the token had more than that.`
+              : ` That is every Smart Money entry in the ${TOKEN_SCAN_DAYS} day window.`}
+          </p>
 
           {scan.forming.length ? (
             <Forming
@@ -77,6 +94,7 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
               rows={scan.forming}
               symbols={symbols}
               subject={`Smart Money buys in ${name}`}
+              title="Entries too recent to carry a return"
             />
           ) : null}
 

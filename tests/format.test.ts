@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fmtAge, fmtDateTime, fmtGroup, fmtPct, fmtUsd, shortAddr } from "@/lib/format";
+import { fmtAge, fmtDateTime, fmtGroup, fmtPct, fmtSpan, fmtUsd, shortAddr } from "@/lib/format";
 
 describe("format", () => {
   it("formats", () => {
@@ -44,5 +44,14 @@ describe("fmtAge", () => {
   it("handles the sub-hour and missing cases", () => {
     expect(fmtAge("2026-09-16T11:40:00.000Z", now)).toBe("under 1h old");
     expect(fmtAge(null, now)).toBe("n/a");
+  });
+});
+
+describe("fmtSpan", () => {
+  it("reads in hours under two days and in days beyond", () => {
+    expect(fmtSpan("2026-09-15T01:45:00.000Z", "2026-09-16T18:35:00.000Z")).toBe("41 hours");
+    expect(fmtSpan("2026-09-09T12:00:00.000Z", "2026-09-16T12:00:00.000Z")).toBe("7 days");
+    expect(fmtSpan("2026-09-16T11:40:00.000Z", "2026-09-16T12:00:00.000Z")).toBe("under 1 hour");
+    expect(fmtSpan(null, "2026-09-16T12:00:00.000Z")).toBe("n/a");
   });
 });

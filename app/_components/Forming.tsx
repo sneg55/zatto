@@ -10,18 +10,20 @@ export function Forming({
   rows,
   symbols,
   subject,
+  title,
 }: {
   chain: string;
   runId?: string;
   rows: BurstScore[];
   symbols: Map<string, string>;
   subject?: string;
+  title?: string;
 }) {
   const crowded = rows.filter((r) => r.crowded).length;
   const oneToken = new Set(rows.map((r) => r.token)).size === 1;
   return (
     <section className="forming">
-      <h2 className="display-sub">Forming now</h2>
+      <h2 className="display-sub">{title ?? "Forming now"}</h2>
       <p className="foot-note" style={{ marginTop: 0 }}>
         {subject ?? `Buys from the last ${FORMING_WINDOW_HOURS} hours by the wallets in this run`}, too recent to
         carry a return. A burst settles {BURST_SETTLE_MINUTES} minutes after the buy, a 24 hour return needs a day,

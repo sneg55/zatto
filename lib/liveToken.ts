@@ -27,6 +27,7 @@ export interface TokenScan {
   smartMoneyBuys: number;
   entries: number;
   truncated: boolean;
+  window: { from: string; to: string } | null;
   skipped: number;
 }
 
@@ -36,7 +37,8 @@ function emptyStat(token: string): TokenStat {
 
 export async function scanToken(ctx: AppContext, client: ReturnType<typeof nansenClient>, chain: string, token: string, now: Date): Promise<TokenScan> {
   const { buys, isLast } = await fetchSmartMoneyBuys(client, chain, token, TOKEN_SCAN_DAYS, now);
-  const entries = distinctEntries(buys, TOKEN_SCAN_ENTRIES);
+  const all = distinctEntries(buys, Number.MAX_SAFE_INTEGER);
+  const entries = all.slice(0, TOKEN_SCAN_ENTRIES);
   const cutoff = scorableCutoff(now);
   const settled = entries.filter((b) => b.ts <= cutoff);
   const recent = entries.filter((b) => b.ts > cutoff);
@@ -70,7 +72,8 @@ export async function scanToken(ctx: AppContext, client: ReturnType<typeof nanse
     wallets: [...new Set(entries.map((b: Buy) => b.wallet))],
     smartMoneyBuys: buys.length,
     entries: entries.length,
-    truncated: !isLast,
+    truncated: !isLast || all.length > entries.length,
+    window: entries.length ? { from: entries[entries.length - 1].ts, to: entries[0].ts } : null,
     skipped: scored.skipped,
   };
 }

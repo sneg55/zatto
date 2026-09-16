@@ -50,3 +50,13 @@ export const fmtAge = (iso: string | null, now: number = Date.now()): string => 
   if (hours < 48) return `${Math.round(hours)}h old`;
   return `${Math.round(hours / 24)}d old`;
 };
+
+export const fmtSpan = (from: string | null, to: string | null): string => {
+  if (!from || !to) return "n/a";
+  const ms = new Date(to).getTime() - new Date(from).getTime();
+  if (Number.isNaN(ms)) return "n/a";
+  const hours = Math.max(0, ms / 3_600_000);
+  if (hours < 1) return "under 1 hour";
+  if (hours < 48) return `${Math.round(hours)} hours`;
+  return `${Math.round(hours / 24)} days`;
+};
