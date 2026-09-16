@@ -151,6 +151,24 @@ The crowding is concentrated rather than spread: 10 of the 42 tokens account for
 
 An earlier revision of this file quoted 33 crowded buys and +39.8% for the same run. Those figures counted a seven-wallet fleet's simultaneous entries once per wallet. The numbers above count each token minute once, which is the correct denominator, and the code was fixed to match.
 
+## What a burst has been worth
+
+Zatto makes one forward-looking statement, and only this one: of the entries it has already measured at a given burst, how many were higher a day later. It is a base rate for an observed event, not a forecast, and a band under `MIN_RATE_OBSERVATIONS` entries states its count instead of a rate.
+
+Measured on 2026-09-16 over 429 entries on Base, one row per token minute so a fleet counts once. Return is a delayed entry one minute after the Smart Money buy, held 24 hours.
+
+| Burst band | Entries | Tokens | Higher at 24h | Median | p25 | Worst |
+| --- | --- | --- | --- | --- | --- | --- |
+| under 1x | 263 | 42 | 80 of 263 | -6.4% | -17.3% | -100.0% |
+| 1 to 2x | 104 | 28 | 52 of 104 | +0.1% | -16.9% | -62.4% |
+| 2 to 3x | 25 | 18 | 10 of 25 | -7.2% | -21.2% | -44.1% |
+| 3 to 5x | 16 | 13 | 10 of 16 | +4.9% | -3.5% | -82.4% |
+| 5x and up | 21 | 17 | 17 of 21 | +29.6% | +15.7% | -74.1% |
+
+The signal sits at `SIGNAL_RATIO` and above. Everything below it is close to a coin flip, which is why the 3x `CROWD_RATIO` tag on the boards is descriptive only and carries no claim about price. The 5x band held its share as the sample grew from 16 entries to 21, and at 8x and above it was 10 of 10 tokens with 8 higher.
+
+Two limits worth stating plainly. The 1 hour horizon carries almost nothing, +1.4% against +0.3%, so this is a next-day effect and not an intraday one. And tokens reach the table through the Nansen Smart Money screener, which selects on Smart Money activity rather than on price; the rates are conditional on that selection.
+
 ## Forming now
 
 A scored buy has to be at least two days old, because its 24 hour return has to settle and the profiler endpoint does not honor a `date.to` bound inside roughly the last day. The burst does not need that wait: it reads the 10 minutes after a buy against the hour before it, so it settles `BURST_MINUTES + MATURITY_MINUTES` after the buy.
