@@ -106,7 +106,7 @@ export function TokenBoard({
 
     {quiet.length ? (
       <details className="quiet-tokens">
-        <summary>{quiet.length} more tokens took no entry into a burst</summary>
+        <summary>Tokens that took no entry into a burst: {quiet.length} more</summary>
         <div className="table-wrap">
           <table className="data data-cards">
             <thead>

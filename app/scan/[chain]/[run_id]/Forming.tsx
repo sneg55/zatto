@@ -22,7 +22,7 @@ export function Forming({
       <p className="foot-note" style={{ marginTop: 0 }}>
         Buys from the last {FORMING_WINDOW_HOURS} hours by the wallets in this run, too recent to carry a return. A
         burst settles {BURST_SETTLE_MINUTES} minutes after the buy, a 24 hour return needs a day, so these rows say
-        who arrived and say nothing about what it paid. {crowded} of {rows.length} cleared {CROWD_RATIO}x.
+        who arrived and say nothing about what it paid. Cleared {CROWD_RATIO}x: {crowded} of {rows.length}.
       </p>
       <div className="table-wrap">
         <table className="data data-cards">

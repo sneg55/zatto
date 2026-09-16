@@ -7,7 +7,7 @@ import { getCloses } from "../nansen/candles";
 import { burstHours, neededHours, scoreBuy, scoreBurst } from "../score/perBuy";
 import { scoreWallet } from "../score/perWallet";
 import type { BurstScore, BuyScore, TapeBucket } from "../score/types";
-import { BURST_SETTLE_MINUTES, FORMING_BUYS, FORMING_WINDOW_HOURS } from "../score/constants";
+import { BURST_SETTLE_MINUTES, FORMING_BUYS, FORMING_REQUESTS, FORMING_SECONDS, FORMING_WINDOW_HOURS } from "../score/constants";
 import { planJob } from "./planner";
 import { minutesNeeded } from "./scoreWallet";
 import type { Candidate, StepBudgets } from "./types";
@@ -15,18 +15,24 @@ import { LEASE_SECONDS, PLAN_LEASE_SECONDS } from "./leases";
 
 const RUN_REQUEST_CAP = 3000;
 
-async function formingPass(db: D1Like, client: NansenClient, runId: string, chain: string, wallets: string[], now: Date, over: () => boolean): Promise<void> {
+async function formingPass(db: D1Like, client: NansenClient, runId: string, chain: string, wallets: string[], now: Date): Promise<void> {
   const settledBy = new Date(now.getTime() - BURST_SETTLE_MINUTES * 60_000).toISOString();
   const since = new Date(now.getTime() - FORMING_WINDOW_HOURS * 3_600_000).toISOString();
-  const fresh = await loadFreshBuys(db, chain, wallets, since, settledBy, FORMING_BUYS);
+  const startRequests = client.requests;
+  const startedAt = Date.now();
+  const spent = () => client.requests - startRequests >= FORMING_REQUESTS || (Date.now() - startedAt) / 1000 >= FORMING_SECONDS;
   const scored: BurstScore[] = [];
-  for (const buy of fresh) {
-    if (over()) break;
+  await collectBurstScores(db, client, chain, wallets, since, settledBy, now, spent, scored).catch(() => undefined);
+  await saveForming(db, runId, scored.filter((s) => s.settled));
+}
+
+async function collectBurstScores(db: D1Like, client: NansenClient, chain: string, wallets: string[], since: string, until: string, now: Date, spent: () => boolean, into: BurstScore[]): Promise<void> {
+  for (const buy of await loadFreshBuys(db, chain, wallets, since, until, FORMING_BUYS)) {
+    if (spent()) return;
     const buckets: TapeBucket[] = [];
     for (const hour of burstHours(buy.ts)) buckets.push(await getTape(db, client, chain, buy.token, hour, now, "recent"));
-    scored.push(scoreBurst({ buy, buckets, now }));
+    into.push(scoreBurst({ buy, buckets, now }));
   }
-  await saveForming(db, runId, scored.filter((s) => s.settled));
 }
 
 function scratchKey(runId: string, wallet: string): string {
@@ -78,7 +84,7 @@ export async function runScanStep(db: D1Like, client: NansenClient, runId: strin
       bucketCursor = 0;
       await saveJobProgress(db, runId, cursor, 0, used + client.requests - startRequests);
     }
-    await formingPass(db, client, runId, job.chain, candidates.filter((c) => !c.dropped).map((c) => c.wallet), now, over);
+    await formingPass(db, client, runId, job.chain, candidates.filter((c) => !c.dropped).map((c) => c.wallet), now);
     await publishJob(db, runId, nowIso, used + client.requests - startRequests);
     return { done: true };
   } catch (e) {

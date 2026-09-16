@@ -6,7 +6,7 @@ Built for the Nansen Meridian Buildathon (Sep 14-27, 2026). Powered by Nansen AP
 
 ## What Zatto measures
 
-For a wallet, Zatto reports new buyers after each of its buys against the token's prior rate, how fast they arrive, and what a delayed entry after the wallet would have returned, ending in a crowd verdict. For a chain it ranks Smart Money wallets by crowding. For one wallet it shows a provisional panel of the buyers arriving after its newest buy.
+For a chain, Zatto ranks the tokens Smart Money bought by how hard a burst of new buyers followed, with the wallets that triggered each burst nested under it, and the wallet leaderboard below as supporting detail. For a wallet it reports new buyers after each of its buys against the token's prior rate, how fast they arrive, and what a delayed entry after the wallet would have returned. For one wallet it shows a provisional panel of the buyers arriving after its newest buy.
 
 Zatto claims three things, and only these:
 
@@ -18,11 +18,18 @@ Zatto does not claim any address copied the wallet, and it does not predict.
 
 ## Verdicts
 
-Each wallet gets a crowd class and a return note:
+A token gets a crowd class from its own entries:
+
+- `CROWDED`: at least one scored entry drew a crowd (`crowdRatio10 >= 3`, see Method). Crowding is an event, so one measured entry settles it.
+- `QUIET`: scored entries exist and none of them drew a crowd.
+
+A wallet gets a crowd class and a return note under a stricter rule, because a wallet is a habit rather than an event:
 
 - `THIN`: fewer than 4 scored buys in the lookback window. Not enough data for a verdict.
-- `CROWDED`: more than half of scored buys drew a crowd (`crowdRatio10 >= 3`, see Method).
+- `CROWDED`: more than half of scored buys drew a crowd.
 - `QUIET`: scored buys exist but a crowd formed on half or fewer of them.
+
+On the runs measured so far no wallet has been `CROWDED`, because crowding concentrates in a handful of tokens rather than spreading across any one wallet's whole book. The board leads with tokens for that reason.
 
 Repeated swaps by one wallet into one token inside the same hour are one buy, not several. The profiler returns each fill of a split swap as its own trade, and counting them separately makes a median over copies of a single entry.
 
@@ -126,6 +133,10 @@ Constants live in `lib/score/constants.ts`. They are choices made for this build
 | `FRESH_TOKEN_MAX_AGE_DAYS` | 14 | The age bound on the fresh half of discovery. Sorting the screener by volume alone returns tokens already doing tens to hundreds of buyers an hour, where nothing can look like a burst |
 | `MATURITY_MINUTES` | 15 | How long after an hour bucket or a candle minute Zatto waits before treating it as final, to allow for late-indexed trades |
 | `SCORABLE_AGE_MINUTES` | 2880 | How old a buy must be before it is used for scoring. The profiler endpoint does not honor a `date.to` bound inside roughly the last day, so the cutoff has to clear that window, not just the 24 hour return horizon plus maturity |
+| `FORMING_WINDOW_HOURS` | 48 | How far back the forming pass looks for buys too recent to score. Beyond it a buy is old enough to carry a return and belongs on the scored board instead |
+| `FORMING_BUYS` | 15 | How many of the newest such buys the pass scores |
+| `FORMING_REQUESTS` | 24 | The pass's own request budget, separate from the step's, so a forming pass cannot consume the requests a scored run still needs |
+| `FORMING_SECONDS` | 25 | The pass's own time budget, for the same reason. Without one an early version outlived the step lease and left a fully scored run unpublished |
 | `CARRY_FORWARD_MAX_MINUTES` | 60 | `tgm/token-ohlcv` only returns a candle for a minute that actually had a trade, so a target minute with no candle of its own resolves to the close of the nearest earlier candle, as long as that candle is within this many minutes. Beyond it the price is too stale to use and the minute is recorded `missing` instead |
 
 What the code does today: an hour bucket is fetched from `tgm/dex-trades` up to 3 pages of 1,000 rows; a bucket that still needs a 4th page, or whose stored rows exceed 1,500,000 bytes, is marked capped and every buy that needs it becomes unusable. A `tgm/token-ohlcv` minute with no candle at that exact minute is resolved to the nearest earlier candle within `CARRY_FORWARD_MAX_MINUTES`; past that bound, or with no earlier candle at all, it is recorded as a `candle_gap` row (`missing`, `truncated`, or `pending`) rather than treated as a zero return.
@@ -135,6 +146,14 @@ Measured on run `manual-base-6` against the live API on 2026-09-15, published at
 The burst ratio ran a median of 1.02x, 2.64x at the 75th percentile, 17.00x at the 90th and 38.50x at the top. Across the five bands the run put 74 buys under 1x, 37 between 1 and 2x, 18 between 2 and 3x, 12 between 3 and 5x and 21 at 5x or more, so 33 of 162 cleared the 3x threshold. Entering one minute after those crowded buys returned a median +39.8% at 24 hours, against -1.7% after the 129 quiet ones.
 
 The crowding is concentrated rather than spread: 10 of the 42 tokens account for every crowded buy. LOTTO carried 17 of them over 35 scored buys and returned a median +106.6%, and `$POOP` drew a crowd on all 8 of its buys at a median burst of 17.00x. No wallet was CROWDED, because that needs more than half of one wallet's own buys to draw a crowd and the highest was well under it.
+
+## Forming now
+
+A scored buy has to be at least two days old, because its 24 hour return has to settle and the profiler endpoint does not honor a `date.to` bound inside roughly the last day. The burst does not need that wait: it reads the 10 minutes after a buy against the hour before it, so it settles `BURST_MINUTES + MATURITY_MINUTES` after the buy.
+
+Every run therefore closes with a forming pass over the newest buys its wallets made in the last `FORMING_WINDOW_HOURS` hours, scoring burst alone, no prices and no returns. Those buys were already fetched and stored during the wallet fetch, so the pass costs tape reads and nothing else, and it runs under its own request and time budget so it can never block a scored run from publishing. Anything whose burst window has not closed, or whose token was too busy to read, is left out.
+
+Measured on run `manual-base-7` on 2026-09-16: the pass returned 15 buys, the newest 42 minutes old, one of them crowded at 4.32x against a prior-hour rate of 25 buyers. The run's oldest scored buy on the same board was 29 days old.
 
 The board also names an address cluster: seven of the thirty wallets carry byte-identical buy lists under different transaction hashes, the same eight tokens at the same minutes with the same returns. That is a fleet, not a duplicated row, and the scan page says so under each address, because seven identical rows would otherwise read as a rendering fault and their scored buys are one set of observations rather than seven.
 

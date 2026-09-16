@@ -148,7 +148,7 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
         </p>
         {fleets.length ? (
           <p className="pooled-note">
-            {fleetWallets} of the {rows.length} scanned wallets buy in lockstep with at least one other, in{" "}
+            Buying in lockstep with at least one other wallet: {fleetWallets} of the {rows.length} scanned, in{" "}
             {fleets.length} {fleets.length === 1 ? "fleet" : "fleets"}, the largest holding {fleets[0].length}{" "}
             wallets on an identical buy list. A fleet reads as several wallets agreeing when it is one actor, so its
             entries are counted once per token minute above.
@@ -183,8 +183,8 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
         <section className="section">
           <h2 className="display-sub">Where the crowding happened</h2>
           <p className="foot-note" style={{ marginTop: 0 }}>
-            {crowdedTokens.length} of {byToken.length} tokens took at least one entry into a {CROWD_RATIO}x burst,
-            hardest first. Open a token to see which wallets entered it and when.
+            Ranked hardest burst first. Of {byToken.length} tokens in this run, {crowdedTokens.length} took at
+            least one entry into a {CROWD_RATIO}x burst. Open a token to see which wallets entered it and when.
           </p>
           <TokenBoard chain={chain} runId={run_id} tokens={crowdedTokens} quiet={quietTokens} symbols={symbols} cluster={cluster} />
         </section>

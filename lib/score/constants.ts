@@ -21,3 +21,5 @@ export const SCORABLE_AGE_MINUTES = 2880;
 export const BURST_SETTLE_MINUTES = BURST_MINUTES + MATURITY_MINUTES;
 export const FORMING_WINDOW_HOURS = 48;
 export const FORMING_BUYS = 15;
+export const FORMING_REQUESTS = 24;
+export const FORMING_SECONDS = 25;
