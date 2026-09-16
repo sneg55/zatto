@@ -51,7 +51,7 @@ export default async function Home() {
             <p className="eyebrow">Latest run</p>
             <p className="hero-panel-figure">{fmtRatio(run.pooled.burst.p90)}</p>
             <p className="hero-panel-label">
-              burst at the 90th percentile of {run.pooled.buys} scored buys, highest {fmtRatio(run.pooled.burst.max)}
+              burst at the 90th percentile of {run.pooled.buys} scored entries, highest {fmtRatio(run.pooled.burst.max)}
             </p>
             {comparable ? (
               <p className="hero-panel-note">
@@ -63,7 +63,7 @@ export default async function Home() {
               </p>
             ) : (
               <p className="hero-panel-note">
-                {run.pooled.nCrowded} of {run.pooled.buys} scored buys cleared {CROWD_RATIO}x the token&apos;s
+                {run.pooled.nCrowded} of {run.pooled.buys} scored entries cleared {CROWD_RATIO}x the token&apos;s
                 prior-hour buyer rate.
               </p>
             )}

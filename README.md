@@ -143,11 +143,13 @@ Constants live in `lib/score/constants.ts`. They are choices made for this build
 
 What the code does today: an hour bucket is fetched from `tgm/dex-trades` up to 3 pages of 1,000 rows; a bucket that still needs a 4th page, or whose stored rows exceed 1,500,000 bytes, is marked capped and every buy that needs it becomes unusable. A `tgm/token-ohlcv` minute with no candle at that exact minute is resolved to the nearest earlier candle within `CARRY_FORWARD_MAX_MINUTES`; past that bound, or with no earlier candle at all, it is recorded as a `candle_gap` row (`missing`, `truncated`, or `pending`) rather than treated as a zero return.
 
-Measured on run `manual-base-6` against the live API on 2026-09-15, published at `/scan/base/manual-base-6`: 30 wallets discovered across 24 screener tokens and scored for 458 requests, giving 162 scored buys over 120 distinct token minutes on 42 tokens.
+Measured on run `manual-base-6` against the live API on 2026-09-15, published at `/scan/base/manual-base-6`: 30 wallets discovered across 24 screener tokens and scored for 458 requests, giving 162 wallet buys that collapse to 120 distinct token minutes on 42 tokens. Wallets entering the same token in the same minute are one observation, because a fleet acting together is one event however many addresses carry it.
 
-The burst ratio ran a median of 1.02x, 2.64x at the 75th percentile, 17.00x at the 90th and 38.50x at the top. Across the five bands the run put 74 buys under 1x, 37 between 1 and 2x, 18 between 2 and 3x, 12 between 3 and 5x and 21 at 5x or more, so 33 of 162 cleared the 3x threshold. Entering one minute after those crowded buys returned a median +39.8% at 24 hours, against -1.7% after the 129 quiet ones.
+The burst ratio ran a median of 0.85x and 2.74x at the 90th percentile, with 38.50x at the top. Across the five bands the run put 67 entries under 1x, 30 between 1 and 2x, 11 between 2 and 3x, 5 between 3 and 5x and 7 at 5x or more, so 12 of 120 cleared the 3x threshold. Entering one minute after those crowded entries returned a median +18.7% at 24 hours, against -7.1% after the 108 quiet ones.
 
-The crowding is concentrated rather than spread: 10 of the 42 tokens account for every crowded buy. LOTTO carried 17 of them over 35 scored buys and returned a median +106.6%, and `$POOP` drew a crowd on all 8 of its buys at a median burst of 17.00x. No wallet was CROWDED, because that needs more than half of one wallet's own buys to draw a crowd and the highest was well under it.
+The crowding is concentrated rather than spread: 10 of the 42 tokens account for every crowded entry. LOTTO carried 3 of them over 7 scored entries and returned a median +106.6%, PLUMBER drew the hardest burst of the run at 38.50x and still lost 35.0% at 24 hours, and `$POOP` cleared 17.00x for +22.7%. No wallet was CROWDED, because that needs more than half of one wallet's own buys to draw a crowd and the highest was well under it.
+
+An earlier revision of this file quoted 33 crowded buys and +39.8% for the same run. Those figures counted a seven-wallet fleet's simultaneous entries once per wallet. The numbers above count each token minute once, which is the correct denominator, and the code was fixed to match.
 
 ## Forming now
 

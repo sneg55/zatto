@@ -81,6 +81,16 @@ export function burstDistribution(ratios: number[]): Array<{ label: string; coun
   return BURST_BANDS.map((b) => ({ label: b.label, count: ratios.filter((r) => r >= b.min && r < b.max).length }));
 }
 
+export function observations(buys: BuyScore[]): BuyScore[] {
+  const first = new Map<string, BuyScore>();
+  for (const b of buys) {
+    const key = `${b.token}|${b.ts}`;
+    const held = first.get(key);
+    if (!held || b.tx.localeCompare(held.tx) < 0) first.set(key, b);
+  }
+  return [...first.values()];
+}
+
 export function tokenBreakdown(rows: WalletScore[]): TokenStat[] {
   const byToken = new Map<string, Array<{ wallet: string; buy: BuyScore }>>();
   for (const r of rows) for (const buy of r.buys) {
@@ -89,20 +99,21 @@ export function tokenBreakdown(rows: WalletScore[]): TokenStat[] {
   }
   return [...byToken.entries()]
     .map(([token, hits]) => {
-      const bursts = hits.map((h) => h.buy.crowdRatio10).filter((v) => Number.isFinite(v));
-      const crowded = hits.filter((h) => h.buy.crowded).length;
+      const obs = observations(hits.map((h) => h.buy));
+      const bursts = obs.map((b) => b.crowdRatio10).filter((v) => Number.isFinite(v));
+      const crowded = obs.filter((b) => b.crowded).length;
       const entries = hits
         .map((h) => ({ wallet: h.wallet, ts: h.buy.ts, burst: h.buy.crowdRatio10, crowded: h.buy.crowded, delayed24h: h.buy.delayedReturn.h24 }))
         .sort((a, b) => b.burst - a.burst || (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : a.wallet.localeCompare(b.wallet)));
       return {
         token,
-        buys: hits.length,
-        events: new Set(hits.map((h) => h.buy.ts)).size,
+        buys: obs.length,
+        events: obs.length,
         wallets: new Set(hits.map((h) => h.wallet)).size,
         crowded,
         maxBurst: bursts.length ? Math.max(...bursts) : null,
         medianBurst: median(bursts),
-        medianDelayed24h: median(hits.map((h) => h.buy.delayedReturn.h24).filter((v): v is number => v != null)),
+        medianDelayed24h: median(obs.map((b) => b.delayedReturn.h24).filter((v): v is number => v != null)),
         newest: entries.length ? entries.map((e) => e.ts).sort()[entries.length - 1] : null,
         verdict: (crowded > 0 ? "CROWDED" : "QUIET") as TokenStat["verdict"],
         entries,
@@ -122,16 +133,17 @@ function evidenceWindow(buys: BuyScore[]): EvidenceWindow {
 }
 
 export function pooledRun(rows: WalletScore[]): PooledRun {
-  const usable = rows.flatMap((r) => r.buys.filter((b) => b.usable));
+  const walletBuys = rows.flatMap((r) => r.buys.filter((b) => b.usable));
+  const usable = observations(walletBuys);
   const crowded = usable.filter((b) => b.crowded);
   const uncrowded = usable.filter((b) => !b.crowded);
   const ratios = usable.map((b) => b.crowdRatio10).filter((v) => Number.isFinite(v));
-  const events = (xs: BuyScore[]) => new Set(xs.map((b) => `${b.token}|${b.ts}`)).size;
   const tokens = (xs: BuyScore[]) => new Set(xs.map((b) => b.token)).size;
   return {
     buys: usable.length,
-    events: events(usable),
-    crowdedEvents: events(crowded),
+    walletBuys: walletBuys.length,
+    events: usable.length,
+    crowdedEvents: crowded.length,
     crowdedTokens: tokens(crowded),
     wallets: rows.length,
     crowded: group(crowded.map((b) => b.delayedReturn.h24)),

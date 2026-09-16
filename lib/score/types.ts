@@ -57,7 +57,7 @@ export interface WalletScore {
 export interface EvidenceWindow { newest: string | null; median: string | null; oldest: string | null }
 
 export interface PooledRun {
-  buys: number; events: number; crowdedEvents: number; crowdedTokens: number; wallets: number; nCrowded: number;
+  buys: number; walletBuys: number; events: number; crowdedEvents: number; crowdedTokens: number; wallets: number; nCrowded: number;
   crowded: GroupStat; uncrowded: GroupStat;
   burst: { median: number | null; p90: number | null; max: number | null };
   distribution: Array<{ label: string; count: number }>;

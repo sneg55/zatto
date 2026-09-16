@@ -2,9 +2,12 @@ import { describe, it, expect } from "vitest";
 import { burstDistribution, clusters, pooledRun, scoreWallet, sortLeaderboard, tokenBreakdown } from "@/lib/score/perWallet";
 import type { BuyScore } from "@/lib/score/types";
 
+let seq = 0;
+
 function mk(p: Partial<BuyScore> & { crowded: boolean; d24?: number | null }): BuyScore {
+  const minute = String(seq++ % 60).padStart(2, "0");
   return {
-    tx: p.tx ?? Math.random().toString(36), token: p.token ?? "0xa", ts: p.ts ?? "2026-09-10T00:00:00.000Z",
+    tx: p.tx ?? Math.random().toString(36), token: p.token ?? "0xa", ts: p.ts ?? `2026-09-10T00:${minute}:00.000Z`,
     baselineRate: p.baselineRate ?? 4, newBuyers: p.newBuyers ?? { m10: 2, m30: 4, m60: p.crowded ? 15 : 3 },
     fastShare: p.fastShare !== undefined ? p.fastShare : 0.5, crowdRatio: p.crowded ? 3.75 : 0.75, crowdRatio10: p.crowdRatio10 ?? (p.crowded ? 4.5 : 0.9), crowded: p.crowded,
     fillPrice: 1, entryPrice: 1.01,
@@ -75,6 +78,35 @@ describe("pooledRun", () => {
   });
 });
 
+describe("one observation per token minute", () => {
+  it("counts a fleet entering one token minute once, however many wallets carried it", () => {
+    const ts = "2026-09-12T10:00:00.000Z";
+    const fleet = ["0xa", "0xb", "0xc", "0xd"].map((w) =>
+      scoreWallet("base", w, [
+        mk({ crowded: true, token: "0xhot", ts, crowdRatio10: 9, d24: 0.5 }),
+        mk({ crowded: false, token: "0xcalm", ts: "2026-09-12T11:00:00.000Z", crowdRatio10: 1, d24: -0.1 }),
+      ]));
+    const pooled = pooledRun(fleet);
+    expect(pooled.buys).toBe(2);
+    expect(pooled.walletBuys).toBe(8);
+    expect(pooled.nCrowded).toBe(1);
+    expect(pooled.crowdedEvents).toBe(1);
+    const [hot] = tokenBreakdown(fleet);
+    expect(hot.buys).toBe(1);
+    expect(hot.wallets).toBe(4);
+    expect(hot.entries).toHaveLength(4);
+  });
+
+  it("keeps two entries into one token at different minutes as two observations", () => {
+    const w = scoreWallet("base", "0xa", [
+      mk({ crowded: true, token: "0xhot", ts: "2026-09-12T10:00:00.000Z", crowdRatio10: 9 }),
+      mk({ crowded: true, token: "0xhot", ts: "2026-09-12T10:01:00.000Z", crowdRatio10: 9 }),
+    ]);
+    expect(pooledRun([w]).buys).toBe(2);
+    expect(tokenBreakdown([w])[0].buys).toBe(2);
+  });
+});
+
 describe("clusters", () => {
   it("names wallets whose scored buys are the same token minutes", () => {
     const shape = [mk({ crowded: true, token: "0xa", ts: "2026-09-11T20:55:00.000Z" }), mk({ crowded: false, token: "0xb", ts: "2026-09-12T20:47:00.000Z" })];
@@ -104,9 +136,10 @@ describe("burstDistribution and tokenBreakdown", () => {
     const peer = scoreWallet("base", "0xb", [mk({ crowded: true, token: "0xhot", ts: "2026-09-12T10:00:00.000Z", d24: 0.5 })]);
     const rows = tokenBreakdown([quiet, peer]);
     expect(rows[0].token).toBe("0xhot");
-    expect(rows[0].crowded).toBe(2);
+    expect(rows[0].crowded).toBe(1);
     expect(rows[0].wallets).toBe(2);
     expect(rows[0].events).toBe(1);
+    expect(rows[0].entries).toHaveLength(2);
     expect(rows[1].token).toBe("0xcalm");
     expect(rows[1].medianDelayed24h).toBeCloseTo(-0.15);
   });

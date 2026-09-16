@@ -106,9 +106,11 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
         <h2 className="display-sub">Across the run</h2>
         <div className="figure-row">
           <div className="figure">
-            <span className="figure-label">Buys scored</span>
+            <span className="figure-label">Entries scored</span>
             <span className="figure-value">{pooled.buys}</span>
-            <span className="figure-sub">{pooled.events} distinct token minutes, {pooled.wallets} wallets</span>
+            <span className="figure-sub">
+              distinct token minutes, from {pooled.walletBuys} wallet buys by {pooled.wallets} wallets
+            </span>
           </div>
           <div className="figure">
             <span className="figure-label">Burst, median</span>
@@ -123,7 +125,7 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
           <div className="figure">
             <span className="figure-label">Crowded</span>
             <span className="figure-value">{pooled.nCrowded}</span>
-            <span className="figure-sub">of {pooled.buys} buys at {CROWD_RATIO}x</span>
+            <span className="figure-sub">of {pooled.buys} entries at {CROWD_RATIO}x</span>
           </div>
           <div className="figure">
             <span className="figure-label">Newest evidence</span>
@@ -136,12 +138,13 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
             <>
               Entering one minute after a crowded buy returned <Delta value={pooled.crowded.median} /> at 24 hours,
               against <Delta value={pooled.uncrowded.median} /> after a quiet one. That is {pooled.crowded.n} crowded
-              buys over {pooled.crowdedEvents} distinct token minutes on {pooled.crowdedTokens}{" "}
-              {pooled.crowdedTokens === 1 ? "token" : "tokens"}, against {pooled.uncrowded.n} quiet ones.
+              entries on {pooled.crowdedTokens} {pooled.crowdedTokens === 1 ? "token" : "tokens"}, against{" "}
+              {pooled.uncrowded.n} quiet ones. Wallets entering the same token minute count once, so a fleet is one
+              observation rather than several.
             </>
           ) : (
             <>
-              No return comparison yet. {pooled.nCrowded} of {pooled.buys} scored buys cleared {CROWD_RATIO}x the
+              No return comparison yet. {pooled.nCrowded} of {pooled.buys} scored entries cleared {CROWD_RATIO}x the
               token&apos;s prior-hour buyer rate, and the comparison needs three on each side.
             </>
           )}
@@ -162,8 +165,8 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
         <section className="band">
           <h2 className="display-sub">How hard the bursts hit</h2>
           <p className="foot-note" style={{ marginTop: 0 }}>
-            Every scored buy placed by its 10 minute burst against the token&apos;s prior-hour rate. Anything from 3x
-            is called crowded.
+            Every scored entry placed by its 10 minute burst against the token&apos;s prior-hour rate. Anything from
+            3x is called crowded.
           </p>
           <ul className="histogram">
             {pooled.distribution.map((b) => (
