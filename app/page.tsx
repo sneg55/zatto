@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getDb } from "@/lib/db/d1";
 import { latestPublishedJob, readScoresForRun } from "@/lib/db/queries";
 import { pooledRun } from "@/lib/score/perWallet";
-import { fmtDateTime, fmtRatio } from "@/lib/format";
+import { fmtAge, fmtDateTime, fmtRatio } from "@/lib/format";
 import { Delta } from "@/app/_components/Delta";
 import { WalletLookup } from "@/app/_components/WalletLookup";
 import { CROWD_RATIO } from "@/lib/score/constants";
@@ -15,7 +15,7 @@ async function latest() {
   if (!job) return null;
   const rows = await readScoresForRun(db, "base", job.run_id);
   if (rows.length === 0) return null;
-  return { job, pooled: pooledRun(rows) };
+  return { job, pooled: pooledRun(rows), wallets: rows.length, crowdedWallets: rows.filter((r) => r.verdict === "CROWDED").length };
 }
 
 export default async function Home() {
@@ -63,6 +63,10 @@ export default async function Home() {
               </p>
             )}
             <p className="hero-panel-meta">
+              Newest buy in the run is {fmtAge(run.pooled.evidence.newest)}, median{" "}
+              {fmtAge(run.pooled.evidence.median)}.
+            </p>
+            <p className="hero-panel-meta">
               <Link href={`/scan/base/${run.job.run_id}`}>{run.job.run_id}</Link>
               {run.job.finished_at ? `, ${fmtDateTime(run.job.finished_at)}` : null}
             </p>
@@ -102,10 +106,21 @@ export default async function Home() {
           <span className="tag tag-thin">THIN</span>
         </p>
         <p style={{ maxWidth: "68ch" }}>
-          CROWDED when more than half of scored buys drew at least {CROWD_RATIO} times the token&apos;s prior-hour
-          buyer rate in the 10 minutes after the buy. QUIET otherwise. THIN under four scored buys. A wallet&apos;s
-          repeated swaps into one token inside an hour count as one buy. The return comparison is pooled across the
-          run and stated only when both groups hold at least three mature buys.
+          A token is CROWDED when at least one scored entry drew {CROWD_RATIO} times the token&apos;s prior-hour
+          buyer rate in the 10 minutes after it, and QUIET when none did. Wallets carry the same words on a stricter
+          rule: CROWDED needs more than half of the wallet&apos;s own scored buys to clear that bar, and THIN means
+          under four scored buys.
+          {run ? (
+            <>
+              {" "}On the latest run {run.crowdedWallets} of {run.wallets} wallets cleared it, because crowding
+              concentrates in tokens rather than spreading across a wallet&apos;s whole book.
+            </>
+          ) : null}
+        </p>
+        <p style={{ maxWidth: "68ch" }}>
+          A wallet&apos;s repeated swaps into one token inside an hour count as one buy. The return comparison is
+          pooled across the run and stated only when both groups hold at least three mature buys. Returns need 24
+          hours to settle, so the evidence on a board is always at least two days old.
         </p>
       </section>
     </main>

@@ -1,5 +1,5 @@
 import { MIN_GROUP, MIN_USABLE_BUYS } from "./constants";
-import type { BuyScore, GroupStat, PooledRun, TokenStat, Verdict, WalletScore } from "./types";
+import type { BuyScore, EvidenceWindow, GroupStat, PooledRun, TokenStat, Verdict, WalletScore } from "./types";
 
 function median(xs: number[]): number | null {
   if (xs.length === 0) return null;
@@ -82,24 +82,43 @@ export function burstDistribution(ratios: number[]): Array<{ label: string; coun
 }
 
 export function tokenBreakdown(rows: WalletScore[]): TokenStat[] {
-  const byToken = new Map<string, BuyScore[]>();
-  const wallets = new Map<string, Set<string>>();
-  for (const r of rows) for (const b of r.buys) {
-    if (!b.usable) continue;
-    byToken.set(b.token, [...(byToken.get(b.token) ?? []), b]);
-    wallets.set(b.token, (wallets.get(b.token) ?? new Set()).add(r.wallet));
+  const byToken = new Map<string, Array<{ wallet: string; buy: BuyScore }>>();
+  for (const r of rows) for (const buy of r.buys) {
+    if (!buy.usable) continue;
+    byToken.set(buy.token, [...(byToken.get(buy.token) ?? []), { wallet: r.wallet, buy }]);
   }
   return [...byToken.entries()]
-    .map(([token, buys]) => ({
-      token,
-      buys: buys.length,
-      events: new Set(buys.map((b) => b.ts)).size,
-      wallets: wallets.get(token)?.size ?? 0,
-      crowded: buys.filter((b) => b.crowded).length,
-      medianBurst: median(buys.map((b) => b.crowdRatio10)),
-      medianDelayed24h: median(buys.map((b) => b.delayedReturn.h24).filter((v): v is number => v != null)),
-    }))
-    .sort((a, b) => b.crowded - a.crowded || (b.medianBurst ?? -Infinity) - (a.medianBurst ?? -Infinity) || a.token.localeCompare(b.token));
+    .map(([token, hits]) => {
+      const bursts = hits.map((h) => h.buy.crowdRatio10).filter((v) => Number.isFinite(v));
+      const crowded = hits.filter((h) => h.buy.crowded).length;
+      const entries = hits
+        .map((h) => ({ wallet: h.wallet, ts: h.buy.ts, burst: h.buy.crowdRatio10, crowded: h.buy.crowded, delayed24h: h.buy.delayedReturn.h24 }))
+        .sort((a, b) => b.burst - a.burst || (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : a.wallet.localeCompare(b.wallet)));
+      return {
+        token,
+        buys: hits.length,
+        events: new Set(hits.map((h) => h.buy.ts)).size,
+        wallets: new Set(hits.map((h) => h.wallet)).size,
+        crowded,
+        maxBurst: bursts.length ? Math.max(...bursts) : null,
+        medianBurst: median(bursts),
+        medianDelayed24h: median(hits.map((h) => h.buy.delayedReturn.h24).filter((v): v is number => v != null)),
+        newest: entries.length ? entries.map((e) => e.ts).sort()[entries.length - 1] : null,
+        verdict: (crowded > 0 ? "CROWDED" : "QUIET") as TokenStat["verdict"],
+        entries,
+      };
+    })
+    .sort((a, b) =>
+      Number(b.verdict === "CROWDED") - Number(a.verdict === "CROWDED")
+      || (b.maxBurst ?? -Infinity) - (a.maxBurst ?? -Infinity)
+      || b.buys - a.buys
+      || a.token.localeCompare(b.token));
+}
+
+function evidenceWindow(buys: BuyScore[]): EvidenceWindow {
+  const ts = buys.map((b) => b.ts).sort();
+  if (ts.length === 0) return { newest: null, median: null, oldest: null };
+  return { newest: ts[ts.length - 1], median: ts[Math.floor((ts.length - 1) / 2)], oldest: ts[0] };
 }
 
 export function pooledRun(rows: WalletScore[]): PooledRun {
@@ -120,20 +139,22 @@ export function pooledRun(rows: WalletScore[]): PooledRun {
     nCrowded: crowded.length,
     burst: { median: quantile(ratios, 0.5), p90: quantile(ratios, 0.9), max: ratios.length ? Math.max(...ratios) : null },
     distribution: burstDistribution(ratios),
+    evidence: evidenceWindow(usable),
   };
 }
 
-export function clusters(rows: WalletScore[]): Map<string, number> {
+export function clusterGroups(rows: WalletScore[]): string[][] {
   const byShape = new Map<string, string[]>();
   for (const r of rows) {
     if (r.n === 0) continue;
     const shape = r.buys.map((b) => `${b.token}|${b.ts}`).sort().join(",");
     byShape.set(shape, [...(byShape.get(shape) ?? []), r.wallet]);
   }
+  return [...byShape.values()].filter((g) => g.length > 1).sort((a, b) => b.length - a.length);
+}
+
+export function clusters(rows: WalletScore[]): Map<string, number> {
   const out = new Map<string, number>();
-  for (const wallets of byShape.values()) {
-    if (wallets.length < 2) continue;
-    for (const w of wallets) out.set(w, wallets.length);
-  }
+  for (const wallets of clusterGroups(rows)) for (const w of wallets) out.set(w, wallets.length);
   return out;
 }

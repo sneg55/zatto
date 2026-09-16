@@ -110,4 +110,48 @@ describe("burstDistribution and tokenBreakdown", () => {
     expect(rows[1].token).toBe("0xcalm");
     expect(rows[1].medianDelayed24h).toBeCloseTo(-0.15);
   });
+
+  it("calls a token CROWDED on a single crowded entry and ranks by the hardest burst", () => {
+    const one = scoreWallet("base", "0xa", [
+      mk({ crowded: true, token: "0xspike", ts: "2026-09-12T10:00:00.000Z", crowdRatio10: 35 }),
+      mk({ crowded: true, token: "0xsteady", ts: "2026-09-12T11:00:00.000Z", crowdRatio10: 4 }),
+      mk({ crowded: true, token: "0xsteady", ts: "2026-09-12T12:00:00.000Z", crowdRatio10: 5 }),
+      mk({ crowded: false, token: "0xcalm", ts: "2026-09-12T13:00:00.000Z", crowdRatio10: 0.5 }),
+    ]);
+    const rows = tokenBreakdown([one]);
+    expect(rows.map((r) => r.token)).toEqual(["0xspike", "0xsteady", "0xcalm"]);
+    expect(rows.map((r) => r.verdict)).toEqual(["CROWDED", "CROWDED", "QUIET"]);
+    expect(rows[0].maxBurst).toBe(35);
+    expect(rows[0].buys).toBe(1);
+    expect(rows[1].maxBurst).toBe(5);
+  });
+
+  it("nests every entry under its token, hardest burst first, with the buying wallet", () => {
+    const a = scoreWallet("base", "0xa", [mk({ crowded: false, token: "0xhot", ts: "2026-09-12T10:00:00.000Z", crowdRatio10: 2, d24: 0.1 })]);
+    const b = scoreWallet("base", "0xb", [mk({ crowded: true, token: "0xhot", ts: "2026-09-12T11:00:00.000Z", crowdRatio10: 8, d24: 0.4 })]);
+    const [hot] = tokenBreakdown([a, b]);
+    expect(hot.entries.map((e) => e.wallet)).toEqual(["0xb", "0xa"]);
+    expect(hot.entries[0]).toMatchObject({ burst: 8, crowded: true, delayed24h: 0.4, ts: "2026-09-12T11:00:00.000Z" });
+    expect(hot.newest).toBe("2026-09-12T11:00:00.000Z");
+  });
+});
+
+describe("evidence window", () => {
+  it("reports the newest, median and oldest scored buy in the run", () => {
+    const a = scoreWallet("base", "0xa", [
+      mk({ crowded: false, ts: "2026-09-01T00:00:00.000Z" }),
+      mk({ crowded: false, ts: "2026-09-05T00:00:00.000Z" }),
+      mk({ crowded: false, ts: "2026-09-09T00:00:00.000Z" }),
+      mk({ crowded: false, ts: "2026-09-12T00:00:00.000Z", usable: false, exclusion: "immature", mature: false }),
+    ]);
+    expect(pooledRun([a]).evidence).toEqual({
+      newest: "2026-09-09T00:00:00.000Z",
+      median: "2026-09-05T00:00:00.000Z",
+      oldest: "2026-09-01T00:00:00.000Z",
+    });
+  });
+
+  it("reports nulls when the run scored nothing", () => {
+    expect(pooledRun([]).evidence).toEqual({ newest: null, median: null, oldest: null });
+  });
 });

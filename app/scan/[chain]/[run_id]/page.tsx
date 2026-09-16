@@ -2,14 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db/d1";
 import { publishedJobs, readJob, readScoresForRun, readTokenNames } from "@/lib/db/queries";
-import { clusters, pooledRun, sortLeaderboard, tokenBreakdown } from "@/lib/score/perWallet";
-import { fmtDateTime, fmtRatio, shortAddr } from "@/lib/format";
-import { dexscreenerToken, explorerToken, isSupportedChain, nansenToken } from "@/lib/chains";
+import { clusterGroups, clusters, pooledRun, sortLeaderboard, tokenBreakdown } from "@/lib/score/perWallet";
+import { fmtAge, fmtDateTime, fmtRatio, shortAddr } from "@/lib/format";
+import { isSupportedChain } from "@/lib/chains";
 import type { Candidate } from "@/lib/jobs/types";
 import { StatusTag } from "@/app/_components/Tag";
 import { Delta } from "@/app/_components/Delta";
 import { PaidScan } from "@/app/_components/PaidScan";
 import { Leaderboard } from "./Leaderboard";
+import { TokenBoard } from "./TokenBoard";
 import { CROWD_RATIO } from "@/lib/score/constants";
 
 export const dynamic = "force-dynamic";
@@ -36,10 +37,14 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
   const rows = sortLeaderboard(await readScoresForRun(db, chain, run_id));
   const pooled = pooledRun(rows);
   const cluster = Object.fromEntries(clusters(rows));
+  const fleets = clusterGroups(rows);
+  const fleetWallets = fleets.reduce((n, g) => n + g.length, 0);
   const candidates = JSON.parse(job.candidates) as Candidate[];
   const dropped = candidates.filter((c) => c.dropped);
   const comparable = !pooled.crowded.insufficient && !pooled.uncrowded.insufficient;
   const byToken = tokenBreakdown(rows);
+  const crowdedTokens = byToken.filter((t) => t.verdict === "CROWDED");
+  const quietTokens = byToken.filter((t) => t.verdict === "QUIET");
   const symbols = await readTokenNames(db, chain, byToken.map((t) => t.token));
   const history = (await publishedJobs(db, chain, 6)).filter((j) => j.run_id !== run_id);
   const baseUrl = process.env.PUBLIC_BASE_URL ?? "https://zatto.nsawinyh.workers.dev";
@@ -84,6 +89,12 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
           <span className="meta-label">Wallets scored</span>
           <span className="meta-value">{rows.length} of {candidates.length - dropped.length}</span>
         </div>
+        <div className="meta-item">
+          <span className="meta-label">Take it with you</span>
+          <span className="meta-value">
+            <a href={`/api/run/${chain}/${run_id}`} target="_blank" rel="noopener noreferrer">JSON</a>
+          </span>
+        </div>
       </div>
 
       {job.status === "failed" ? <p>Failed: {job.error}</p> : null}
@@ -111,6 +122,11 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
             <span className="figure-value">{pooled.nCrowded}</span>
             <span className="figure-sub">of {pooled.buys} buys at {CROWD_RATIO}x</span>
           </div>
+          <div className="figure">
+            <span className="figure-label">Newest evidence</span>
+            <span className="figure-value">{fmtAge(pooled.evidence.newest)}</span>
+            <span className="figure-sub">median {fmtAge(pooled.evidence.median)}, oldest {fmtAge(pooled.evidence.oldest)}</span>
+          </div>
         </div>
         <p className="pooled-verdict">
           {comparable ? (
@@ -127,6 +143,14 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
             </>
           )}
         </p>
+        {fleets.length ? (
+          <p className="pooled-note">
+            {fleetWallets} of the {rows.length} scanned wallets buy in lockstep with at least one other, in{" "}
+            {fleets.length} {fleets.length === 1 ? "fleet" : "fleets"}, the largest holding {fleets[0].length}{" "}
+            wallets on an identical buy list. A fleet reads as several wallets agreeing when it is one actor, so its
+            entries are counted once per token minute above.
+          </p>
+        ) : null}
       </section>
 
       {pooled.buys ? (
@@ -150,49 +174,25 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
         </section>
       ) : null}
 
-      <Leaderboard chain={chain} runId={run_id} rows={rows} cluster={cluster} />
-
       {byToken.length ? (
         <section className="section">
           <h2 className="display-sub">Where the crowding happened</h2>
-          <div className="table-wrap">
-            <table className="data data-cards">
-              <thead>
-                <tr>
-                  <th>Token</th>
-                  <th className="num">Scored buys</th>
-                  <th className="num">Entries</th>
-                  <th className="num">Wallets</th>
-                  <th className="num">Crowded</th>
-                  <th className="num">Burst, median</th>
-                  <th className="num">Delayed 24h, median</th>
-                </tr>
-              </thead>
-              <tbody>
-                {byToken.map((t) => (
-                  <tr key={t.token}>
-                    <td data-label="Token" className="lead">
-                      <a href={explorerToken(chain, t.token)} target="_blank" rel="noopener noreferrer" className={symbols.get(t.token) ? undefined : "wallet-addr"}>
-                        {symbols.get(t.token) ?? shortAddr(t.token)}
-                      </a>
-                      <span className="token-links">
-                        <a href={nansenToken(chain, t.token)} target="_blank" rel="noopener noreferrer">Nansen</a>
-                        <a href={dexscreenerToken(chain, t.token)} target="_blank" rel="noopener noreferrer">Dexscreener</a>
-                      </span>
-                    </td>
-                    <td data-label="Scored buys" className="num">{t.buys}</td>
-                    <td data-label="Entries" className="num">{t.events}</td>
-                    <td data-label="Wallets" className="num">{t.wallets}</td>
-                    <td data-label="Crowded" className="num">{t.crowded}</td>
-                    <td data-label="Burst, median" className="num">{fmtRatio(t.medianBurst)}</td>
-                    <td data-label="Delayed 24h, median" className="num"><Delta value={t.medianDelayed24h} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="foot-note" style={{ marginTop: 0 }}>
+            {crowdedTokens.length} of {byToken.length} tokens took at least one entry into a {CROWD_RATIO}x burst,
+            hardest first. Open a token to see which wallets entered it and when.
+          </p>
+          <TokenBoard chain={chain} runId={run_id} tokens={crowdedTokens} quiet={quietTokens} symbols={symbols} cluster={cluster} />
         </section>
       ) : null}
+
+      <section className="section">
+        <h2 className="display-sub">The wallets behind them</h2>
+        <p className="foot-note" style={{ marginTop: 0 }}>
+          Each scanned wallet with the burst its own buys attracted. A wallet is only called crowded when more than
+          half of its scored buys cleared {CROWD_RATIO}x, so a wallet can sit on a crowded token and still read quiet.
+        </p>
+        <Leaderboard chain={chain} runId={run_id} rows={rows} cluster={cluster} />
+      </section>
 
       {dropped.length ? (
         <p className="foot-note">

@@ -757,3 +757,136 @@ th.num .th-sort {
 .terminal-fallback summary:hover {
   color: var(--ink-black);
 }
+
+.token-board {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.token-card {
+  border: 1px solid var(--fog);
+  border-radius: var(--radius);
+  background: var(--paper-white);
+  padding: 18px 20px;
+}
+
+.token-card-crowded {
+  border-color: var(--ink-black);
+}
+
+.token-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.token-name {
+  font-size: 19px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.token-name a {
+  color: var(--ink-black);
+  text-decoration: none;
+  border-bottom: 1px solid var(--fog);
+}
+
+.token-name a:hover {
+  border-bottom-color: var(--ink-black);
+}
+
+.token-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-top: 16px;
+  border: 1px solid var(--stone);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.token-stat {
+  flex: 1 1 130px;
+  display: block;
+  padding: 12px 14px;
+  border-left: 1px solid var(--stone);
+}
+
+.token-stat:first-child {
+  border-left: none;
+}
+
+.token-stat-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ash-gray);
+  margin-bottom: 5px;
+}
+
+.token-stat-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 575;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.token-entries {
+  margin-top: 14px;
+}
+
+.token-entries summary {
+  font-size: 13px;
+  color: var(--graphite);
+  cursor: pointer;
+}
+
+.token-entries summary:hover {
+  color: var(--ink-black);
+}
+
+.token-entries .table-wrap {
+  margin-top: 12px;
+}
+
+@media (max-width: 560px) {
+  .token-card {
+    padding: 16px;
+  }
+
+  .token-stat {
+    flex-basis: 50%;
+  }
+}
+
+.quiet-tokens {
+  margin-top: 20px;
+  border-top: 1px solid var(--stone);
+  padding-top: 16px;
+}
+
+.quiet-tokens summary {
+  font-size: 13px;
+  color: var(--graphite);
+  cursor: pointer;
+}
+
+.quiet-tokens summary:hover {
+  color: var(--ink-black);
+}
+
+.pooled-note {
+  font-size: 14px;
+  color: var(--graphite);
+  max-width: 62ch;
+  margin: 16px 0 0;
+}

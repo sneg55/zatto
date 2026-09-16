@@ -40,3 +40,13 @@ export const fmtExcluded = (excluded: WalletScore["excluded"]): string | null =>
 };
 
 export const fmtRatio = (x: number | null): string => x == null ? "n/a" : `${x.toFixed(2)}x`;
+
+export const fmtAge = (iso: string | null, now: number = Date.now()): string => {
+  if (!iso) return "n/a";
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return iso;
+  const hours = Math.max(0, (now - t) / 3_600_000);
+  if (hours < 1) return "under 1h old";
+  if (hours < 48) return `${Math.round(hours)}h old`;
+  return `${Math.round(hours / 24)}d old`;
+};

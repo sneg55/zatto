@@ -47,14 +47,26 @@ export interface WalletScore {
   buys: BuyScore[];
 }
 
+export interface EvidenceWindow { newest: string | null; median: string | null; oldest: string | null }
+
 export interface PooledRun {
   buys: number; events: number; crowdedEvents: number; crowdedTokens: number; wallets: number; nCrowded: number;
   crowded: GroupStat; uncrowded: GroupStat;
   burst: { median: number | null; p90: number | null; max: number | null };
   distribution: Array<{ label: string; count: number }>;
+  evidence: EvidenceWindow;
+}
+
+export type TokenVerdict = "CROWDED" | "QUIET";
+
+export interface TokenEntry {
+  wallet: string; ts: string; burst: number; crowded: boolean; delayed24h: number | null;
 }
 
 export interface TokenStat {
   token: string; buys: number; events: number; wallets: number; crowded: number;
-  medianBurst: number | null; medianDelayed24h: number | null;
+  maxBurst: number | null; medianBurst: number | null; medianDelayed24h: number | null;
+  newest: string | null;
+  verdict: TokenVerdict;
+  entries: TokenEntry[];
 }

@@ -13,6 +13,11 @@ export function PaidScan({ chain, baseUrl }: { chain: string; baseUrl: string })
         <strong>{priceLabel}</strong> from your own wallet. Zatto answers 402 with x402 payment terms, your wallet
         signs the transfer authorisation, and the scan starts as soon as it settles.
       </p>
+      <p className="foot-note" style={{ marginTop: 0 }}>
+        Worth knowing before you pay: a run re-reads the screener, so back-to-back runs share most of their wallets
+        and returns still need 24 hours to settle. What a paid run buys is a fresh read on the newest tape, not a
+        different population.
+      </p>
 
       <PayScan chain={chain} priceLabel={priceLabel} />
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fmtDateTime, fmtGroup, fmtPct, fmtUsd, shortAddr } from "@/lib/format";
+import { fmtAge, fmtDateTime, fmtGroup, fmtPct, fmtUsd, shortAddr } from "@/lib/format";
 
 describe("format", () => {
   it("formats", () => {
@@ -30,5 +30,19 @@ describe("format", () => {
     expect(fmtUsd(0.5)).toBe("$0.50");
     expect(fmtUsd(0.009)).toBe("<$0.01");
     expect(fmtUsd(1.2e-7)).toBe("<$0.01");
+  });
+});
+
+describe("fmtAge", () => {
+  const now = Date.parse("2026-09-16T12:00:00.000Z");
+  it("reads in hours under two days and in days beyond", () => {
+    expect(fmtAge("2026-09-16T10:50:00.000Z", now)).toBe("1h old");
+    expect(fmtAge("2026-09-14T13:00:00.000Z", now)).toBe("47h old");
+    expect(fmtAge("2026-09-14T11:00:00.000Z", now)).toBe("2d old");
+    expect(fmtAge("2026-08-19T12:00:00.000Z", now)).toBe("28d old");
+  });
+  it("handles the sub-hour and missing cases", () => {
+    expect(fmtAge("2026-09-16T11:40:00.000Z", now)).toBe("under 1h old");
+    expect(fmtAge(null, now)).toBe("n/a");
   });
 });
