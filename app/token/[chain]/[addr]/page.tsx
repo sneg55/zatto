@@ -7,7 +7,7 @@ import { dexscreenerToken, explorerToken, isAddress, isSupportedChain, nansenTok
 import { CROWD_RATIO, TOKEN_SCAN_DAYS, TOKEN_SCAN_ENTRIES } from "@/lib/score/constants";
 import type { TokenScan } from "@/lib/liveToken";
 import { baseRates, rateFor } from "@/lib/score/baseRates";
-import { readAllScoredBuys } from "@/lib/db/queries";
+import { readObservations } from "@/lib/db/queries";
 import { Signal } from "@/app/_components/Signal";
 import { TokenBoard } from "@/app/_components/TokenBoard";
 import { Forming } from "@/app/_components/Forming";
@@ -31,7 +31,7 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
         ...(scan.stat?.entries ?? []).map((e) => ({ burst: e.burst, ts: e.ts })),
       ].sort((a, b) => b.burst - a.burst)[0] ?? null
     : null;
-  const rates = scan ? baseRates(await readAllScoredBuys(db, chain)) : [];
+  const rates = scan ? baseRates(await readObservations(db, chain)) : [];
   const settled = scan?.stat?.buys ?? 0;
 
   return (

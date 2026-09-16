@@ -1,4 +1,4 @@
-import { readTokenNames, readTokenScan, writeTokenScan } from "./db/queries";
+import { readTokenNames, readTokenScan, recordObservations, writeTokenScan } from "./db/queries";
 import { bumpIp, releaseLiveSlot, sha256Hex, takeLiveSlot } from "./jobs/leases";
 import { scoreBuysWithData } from "./jobs/scoreWallet";
 import { fetchSmartMoneyBuys, scorableCutoff } from "./nansen/endpoints";
@@ -53,6 +53,7 @@ export async function scanToken(ctx: AppContext, client: ReturnType<typeof nanse
     const wallet = walletOf.get(`${s.tx}|${s.token}`) ?? token;
     byWallet.set(wallet, [...(byWallet.get(wallet) ?? []), s]);
   }
+  await recordObservations(ctx.db, chain, scored.scored, now.toISOString());
   const walletScores = [...byWallet.entries()].map(([wallet, rows]) => scoreWallet(chain, wallet, rows));
   const stat = tokenBreakdown(walletScores).find((t) => t.token === token) ?? emptyStat(token);
 

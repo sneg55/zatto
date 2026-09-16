@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db/d1";
-import { latestPublishedJob, readAllScoredBuys, readScoresForRun, readTokenNames } from "@/lib/db/queries";
+import { latestPublishedJob, readObservations, readScoresForRun, readTokenNames } from "@/lib/db/queries";
 import { pooledRun } from "@/lib/score/perWallet";
 import { fmtAge, fmtDateTime, fmtRatio } from "@/lib/format";
 import { Delta } from "@/app/_components/Delta";
@@ -20,7 +20,7 @@ async function latest() {
   const rows = await readScoresForRun(db, "base", job.run_id);
   if (rows.length === 0) return null;
   const forming = JSON.parse(job.forming ?? "[]") as BurstScore[];
-  const rates = baseRates(await readAllScoredBuys(db, "base"));
+  const rates = baseRates(await readObservations(db, "base"));
   const live = forming.filter((f) => f.burst >= SIGNAL_RATIO).sort((a, b) => (a.ts < b.ts ? 1 : -1))[0] ?? null;
   const symbols = live ? await readTokenNames(db, "base", [live.token]) : new Map<string, string>();
   return {

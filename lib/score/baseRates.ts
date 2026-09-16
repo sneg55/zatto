@@ -43,8 +43,8 @@ export function settledObservations(buys: BuyScore[]): BuyScore[] {
     && b.delayedReturn.h24 != null);
 }
 
-export function baseRates(observations: BuyScore[]): BaseRate[] {
-  const settled = settledObservations(observations);
+export function baseRates(entries: BuyScore[]): BaseRate[] {
+  const settled = settledObservations(entries);
   return RATE_BANDS.map((band) => {
     const inBand = settled.filter((b) => b.crowdRatio10 >= band.min && b.crowdRatio10 < band.max);
     const returns = inBand.map((b) => b.delayedReturn.h24 as number);

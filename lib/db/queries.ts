@@ -267,6 +267,7 @@ export async function latestPublishedJob(db: D1Like, chain: string): Promise<Sca
 
 export async function writeScore(db: D1Like, s: WalletScore, runId: string, computedAt: string): Promise<void> {
   await db.prepare("INSERT OR REPLACE INTO scores (chain, wallet, run_id, computed_at, provisional, result) VALUES (?,?,?,?,?,?)").bind(s.chain, s.wallet, runId, computedAt, s.provisional ? 1 : 0, JSON.stringify(s)).run();
+  await recordObservations(db, s.chain, s.buys, computedAt);
 }
 
 export async function readScoresForRun(db: D1Like, chain: string, runId: string): Promise<WalletScore[]> {
@@ -286,6 +287,61 @@ export async function readLatestScorePerWallet(db: D1Like, chain: string): Promi
     byWallet.set(r.wallet, { wallet: r.wallet, runId: r.run_id, computedAt: r.computed_at, score: JSON.parse(r.result) as WalletScore });
   }
   return [...byWallet.values()];
+}
+
+export function observationRows(chain: string, buys: BuyScore[]): Array<[string, string, string, number, number, number, number, number]> {
+  const byMinute = new Map<string, BuyScore>();
+  for (const b of buys) {
+    if (!b.usable || typeof b.crowdRatio10 !== "number" || !Number.isFinite(b.crowdRatio10)) continue;
+    if (b.delayedReturn.h24 == null) continue;
+    const key = `${b.token}|${b.ts}`;
+    if (!byMinute.has(key)) byMinute.set(key, b);
+  }
+  return [...byMinute.values()].map((b) => [chain, b.token, b.ts, b.crowdRatio10, b.crowded ? 1 : 0, b.delayedReturn.h24 as number, b.baselineRate, b.newBuyers.m10]);
+}
+
+export async function recordObservations(db: D1Like, chain: string, buys: BuyScore[], seenAt: string): Promise<number> {
+  const rows = observationRows(chain, buys);
+  if (rows.length === 0) return 0;
+  for (let i = 0; i < rows.length; i += 50) {
+    await db.batch(rows.slice(i, i + 50).map((r) => db.prepare(
+      "INSERT OR REPLACE INTO observations (chain, token, ts, burst, crowded, delayed_h24, baseline_rate, new_buyers_10, seen_at) VALUES (?,?,?,?,?,?,?,?,?)"
+    ).bind(...r, seenAt)));
+  }
+  return rows.length;
+}
+
+export async function readObservations(db: D1Like, chain: string): Promise<BuyScore[]> {
+  const rows = (await db.prepare(
+    "SELECT token, ts, burst, crowded, delayed_h24, baseline_rate, new_buyers_10 FROM observations WHERE chain = ?"
+  ).bind(chain).all<{ token: string; ts: string; burst: number; crowded: number; delayed_h24: number; baseline_rate: number; new_buyers_10: number }>()).results;
+  return rows.map((r) => ({
+    tx: "", token: r.token, ts: r.ts,
+    baselineRate: r.baseline_rate, newBuyers: { m10: r.new_buyers_10, m30: 0, m60: 0 }, fastShare: null,
+    crowdRatio: r.burst, crowdRatio10: r.burst, crowded: r.crowded === 1,
+    fillPrice: null, entryPrice: null,
+    leaderReturn: { h1: null, h24: null }, delayedReturn: { h1: null, h24: r.delayed_h24 },
+    mature: true, usable: true, exclusion: null,
+  }));
+}
+
+export async function countObservations(db: D1Like, chain: string): Promise<number> {
+  const r = await db.prepare("SELECT COUNT(*) AS n FROM observations WHERE chain = ?").bind(chain).first<{ n: number }>();
+  return Number(r?.n ?? 0);
+}
+
+export async function readEveryScoredBuy(db: D1Like, chain: string): Promise<BuyScore[]> {
+  const rows = (await db.prepare(
+    "SELECT result FROM scores WHERE chain = ? AND run_id NOT LIKE 'zatto:scored:%'"
+  ).bind(chain).all<{ result: string }>()).results;
+  const byMinute = new Map<string, BuyScore>();
+  for (const r of rows) {
+    for (const b of (JSON.parse(r.result) as WalletScore).buys) {
+      const key = `${b.token}|${b.ts}`;
+      if (!byMinute.has(key)) byMinute.set(key, b);
+    }
+  }
+  return [...byMinute.values()];
 }
 
 export async function readAllScoredBuys(db: D1Like, chain: string): Promise<BuyScore[]> {
