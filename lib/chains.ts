@@ -30,3 +30,7 @@ export function nansenToken(chain: string, token: string): string {
 export function dexscreenerToken(chain: string, token: string): string {
   return `https://dexscreener.com/${chain}/${token}`;
 }
+
+export function walletHref(chain: string, wallet: string, runId?: string): string {
+  return runId ? `/wallet/${chain}/${wallet}?run=${runId}` : `/wallet/${chain}/${wallet}`;
+}

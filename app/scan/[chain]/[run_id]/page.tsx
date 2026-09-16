@@ -11,8 +11,8 @@ import { StatusTag } from "@/app/_components/Tag";
 import { Delta } from "@/app/_components/Delta";
 import { PaidScan } from "@/app/_components/PaidScan";
 import { Leaderboard } from "./Leaderboard";
-import { TokenBoard } from "./TokenBoard";
-import { Forming } from "./Forming";
+import { TokenBoard } from "@/app/_components/TokenBoard";
+import { Forming } from "@/app/_components/Forming";
 import { CROWD_RATIO } from "@/lib/score/constants";
 
 export const dynamic = "force-dynamic";

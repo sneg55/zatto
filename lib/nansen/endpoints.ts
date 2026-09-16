@@ -41,14 +41,26 @@ export async function fetchDiscoveryTokens(client: NansenClient, chain: string, 
 
 export interface TgmTrade { block_timestamp: string; transaction_hash: string; trader_address: string; trader_address_label: string | null; action: "BUY" | "SELL"; estimated_swap_price_usd: number | null; estimated_value_usd: number | null }
 
-export async function fetchSmartMoneyBuyers(client: NansenClient, chain: string, token: string, days: number, now: Date): Promise<Array<{ wallet: string; buys: number }>> {
+export async function fetchSmartMoneyBuys(client: NansenClient, chain: string, token: string, days: number, now: Date): Promise<{ buys: Buy[]; isLast: boolean }> {
   const from = new Date(now.getTime() - days * 86_400_000).toISOString();
   const { data } = await client.post<Envelope<TgmTrade>>("tgm/dex-trades", {
     chain, token_address: token, only_smart_money: true, date: { from, to: now.toISOString() },
-    filters: { action: "BUY" }, pagination: { page: 1, per_page: 1000 },
+    filters: { action: "BUY" }, order_by: [{ field: "block_timestamp", direction: "DESC" }],
+    pagination: { page: 1, per_page: 1000 },
   });
+  return {
+    buys: data.data.map((t) => ({
+      chain, wallet: t.trader_address.toLowerCase(), token: token.toLowerCase(), tx: t.transaction_hash,
+      ts: new Date(t.block_timestamp).toISOString(), usd: t.estimated_value_usd, price: t.estimated_swap_price_usd,
+    })),
+    isLast: data.pagination?.is_last_page ?? true,
+  };
+}
+
+export async function fetchSmartMoneyBuyers(client: NansenClient, chain: string, token: string, days: number, now: Date): Promise<Array<{ wallet: string; buys: number }>> {
+  const { buys } = await fetchSmartMoneyBuys(client, chain, token, days, now);
   const counts = new Map<string, number>();
-  for (const t of data.data) { const w = t.trader_address.toLowerCase(); counts.set(w, (counts.get(w) ?? 0) + 1); }
+  for (const b of buys) counts.set(b.wallet, (counts.get(b.wallet) ?? 0) + 1);
   return [...counts.entries()].map(([wallet, buys]) => ({ wallet, buys }));
 }
 

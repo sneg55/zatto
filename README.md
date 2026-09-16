@@ -6,7 +6,7 @@ Built for the Nansen Meridian Buildathon (Sep 14-27, 2026). Powered by Nansen AP
 
 ## What Zatto measures
 
-For a chain, Zatto ranks the tokens Smart Money bought by how hard a burst of new buyers followed, with the wallets that triggered each burst nested under it, and the wallet leaderboard below as supporting detail. For a wallet it reports new buyers after each of its buys against the token's prior rate, how fast they arrive, and what a delayed entry after the wallet would have returned. For one wallet it shows a provisional panel of the buyers arriving after its newest buy.
+For a chain, Zatto ranks the tokens Smart Money bought by how hard a burst of new buyers followed, with the wallets that triggered each burst nested under it, and the wallet leaderboard below as supporting detail. For a wallet it reports new buyers after each of its buys against the token's prior rate, how fast they arrive, and what a delayed entry after the wallet would have returned. For a token it reads every Smart Money buy over `TOKEN_SCAN_DAYS` days and scores the burst that followed each entry. For one wallet it shows a provisional panel of the buyers arriving after its newest buy.
 
 Zatto claims three things, and only these:
 
@@ -133,6 +133,8 @@ Constants live in `lib/score/constants.ts`. They are choices made for this build
 | `FRESH_TOKEN_MAX_AGE_DAYS` | 14 | The age bound on the fresh half of discovery. Sorting the screener by volume alone returns tokens already doing tens to hundreds of buyers an hour, where nothing can look like a burst |
 | `MATURITY_MINUTES` | 15 | How long after an hour bucket or a candle minute Zatto waits before treating it as final, to allow for late-indexed trades |
 | `SCORABLE_AGE_MINUTES` | 2880 | How old a buy must be before it is used for scoring. The profiler endpoint does not honor a `date.to` bound inside roughly the last day, so the cutoff has to clear that window, not just the 24 hour return horizon plus maturity |
+| `TOKEN_SCAN_DAYS` | 7 | How far back a token scan reads Smart Money buys. One `tgm/dex-trades` call with `only_smart_money` covers the whole window |
+| `TOKEN_SCAN_ENTRIES` | 20 | How many distinct entries a token scan scores. A token that fills a 1,000-row page is read as its newest entries rather than the whole window, and the page says so |
 | `FORMING_WINDOW_HOURS` | 48 | How far back the forming pass looks for buys too recent to score. Beyond it a buy is old enough to carry a return and belongs on the scored board instead |
 | `FORMING_BUYS` | 15 | How many of the newest such buys the pass scores |
 | `FORMING_REQUESTS` | 24 | The pass's own request budget, separate from the step's, so a forming pass cannot consume the requests a scored run still needs |

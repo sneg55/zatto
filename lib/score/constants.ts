@@ -23,3 +23,5 @@ export const FORMING_WINDOW_HOURS = 48;
 export const FORMING_BUYS = 15;
 export const FORMING_REQUESTS = 24;
 export const FORMING_SECONDS = 25;
+export const TOKEN_SCAN_ENTRIES = 20;
+export const TOKEN_SCAN_DAYS = 7;

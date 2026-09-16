@@ -3,6 +3,7 @@ import type { TokenStat } from "@/lib/score/types";
 import { fmtAge, fmtDateTime, fmtRatio, shortAddr } from "@/lib/format";
 import { dexscreenerToken, explorerToken, nansenToken } from "@/lib/chains";
 import { Delta } from "@/app/_components/Delta";
+import { walletHref } from "@/lib/chains";
 
 export function TokenBoard({
   chain,
@@ -13,7 +14,7 @@ export function TokenBoard({
   cluster,
 }: {
   chain: string;
-  runId: string;
+  runId?: string;
   tokens: TokenStat[];
   quiet: TokenStat[];
   symbols: Map<string, string>;
@@ -81,7 +82,7 @@ export function TokenBoard({
                     return (
                       <tr key={`${e.wallet}|${e.ts}`}>
                         <td data-label="Wallet" className="lead">
-                          <Link href={`/wallet/${chain}/${e.wallet}?run=${runId}`} className="wallet-addr">{shortAddr(e.wallet)}</Link>
+                          <Link href={walletHref(chain, e.wallet, runId)} className="wallet-addr">{shortAddr(e.wallet)}</Link>
                           {peers ? <span className="cell-note">one of {peers} wallets buying in lockstep</span> : null}
                         </td>
                         <td data-label="Entered">

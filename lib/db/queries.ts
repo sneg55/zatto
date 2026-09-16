@@ -106,6 +106,15 @@ export async function loadFreshBuys(db: D1Like, chain: string, wallets: string[]
   return out.sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : a.tx.localeCompare(b.tx))).slice(0, limit);
 }
 
+export async function readTokenScan(db: D1Like, chain: string, token: string): Promise<{ result: string; computedAt: string } | null> {
+  const r = await db.prepare("SELECT result, computed_at FROM token_scans WHERE chain = ? AND token = ?").bind(chain, token).first<{ result: string; computed_at: string }>();
+  return r ? { result: r.result, computedAt: r.computed_at } : null;
+}
+
+export async function writeTokenScan(db: D1Like, chain: string, token: string, computedAt: string, result: unknown): Promise<void> {
+  await db.prepare("INSERT OR REPLACE INTO token_scans (chain, token, computed_at, result) VALUES (?,?,?,?)").bind(chain, token, computedAt, JSON.stringify(result)).run();
+}
+
 export async function saveForming(db: D1Like, runId: string, forming: unknown): Promise<void> {
   await db.prepare("UPDATE scan_jobs SET forming = ? WHERE run_id = ?").bind(JSON.stringify(forming), runId).run();
 }

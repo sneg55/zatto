@@ -897,3 +897,44 @@ th.num .th-sort {
   padding: 28px;
   margin: 0 0 32px;
 }
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--ink-black);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.segment {
+  appearance: none;
+  border: none;
+  border-left: 1px solid var(--ink-black);
+  background: var(--paper-white);
+  color: var(--graphite);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+
+.segment:first-child {
+  border-left: none;
+}
+
+.segment-on {
+  background: var(--ink-black);
+  color: var(--paper-white);
+}
+
+.segment:hover:not(.segment-on) {
+  background: var(--stone);
+  color: var(--ink-black);
+}
+
+.lookup-note {
+  font-size: 12px;
+  color: var(--graphite);
+  margin: 10px 0 0;
+}

@@ -31,7 +31,8 @@ export default async function Home() {
           <h1 className="display-hero">Who gets copied</h1>
           <p className="lede">
             Point Zatto at a Smart Money wallet and it tells you how many new buyers show up after it buys, how
-            fast they arrive, and what buying one minute behind it would have returned.
+            fast they arrive, and what buying one minute behind it would have returned. Point it at a token and it
+            tells you which Smart Money wallets bought it and how hard buying crowded after each one.
           </p>
           <div style={{ marginTop: 28 }}>
             <WalletLookup chain="base" />
