@@ -197,7 +197,7 @@ export default async function ScanRun({ params }: { params: Promise<{ chain: str
         <h2 className="display-sub">The wallets behind them</h2>
         <p className="foot-note" style={{ marginTop: 0 }}>
           Each wallet scanned in this run with the burst its own buys attracted. For the standing ranking across
-          every run, see <Link href={`/copied/${chain}`}>most copied</Link>. A wallet is only called crowded when more than
+          every run, see <Link href={`/copied/${chain}`}>worth copying</Link>. A wallet is only called crowded when more than
           half of its scored buys cleared {CROWD_RATIO}x, so a wallet can sit on a crowded token and still read quiet.
         </p>
         <Leaderboard chain={chain} runId={run_id} rows={rows} cluster={cluster} />

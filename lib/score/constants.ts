@@ -27,3 +27,4 @@ export const TOKEN_SCAN_ENTRIES = 20;
 export const TOKEN_SCAN_DAYS = 7;
 export const SIGNAL_RATIO = 5;
 export const MIN_RATE_OBSERVATIONS = 10;
+export const MIN_COPY_BUYS = 6;

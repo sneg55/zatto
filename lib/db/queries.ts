@@ -274,6 +274,23 @@ export async function readScoresForRun(db: D1Like, chain: string, runId: string)
   return (await db.prepare("SELECT result FROM scores WHERE chain = ? AND run_id = ?").bind(chain, runId).all<{ result: string }>()).results.map((r) => JSON.parse(r.result) as WalletScore);
 }
 
+export async function readWalletHistories(db: D1Like, chain: string): Promise<Array<{ wallet: string; computedAt: string; buys: BuyScore[] }>> {
+  const rows = (await db.prepare(
+    "SELECT wallet, computed_at, result FROM scores WHERE chain = ? AND run_id NOT LIKE 'zatto:scored:%'"
+  ).bind(chain).all<{ wallet: string; computed_at: string; result: string }>()).results;
+  const byWallet = new Map<string, { wallet: string; computedAt: string; byMinute: Map<string, BuyScore> }>();
+  for (const r of rows) {
+    const held = byWallet.get(r.wallet) ?? { wallet: r.wallet, computedAt: r.computed_at, byMinute: new Map<string, BuyScore>() };
+    if (r.computed_at > held.computedAt) held.computedAt = r.computed_at;
+    for (const b of (JSON.parse(r.result) as WalletScore).buys) {
+      const key = `${b.token}|${b.ts}`;
+      if (!held.byMinute.has(key)) held.byMinute.set(key, b);
+    }
+    byWallet.set(r.wallet, held);
+  }
+  return [...byWallet.values()].map((w) => ({ wallet: w.wallet, computedAt: w.computedAt, buys: [...w.byMinute.values()] }));
+}
+
 export async function readLatestScorePerWallet(db: D1Like, chain: string): Promise<Array<{ wallet: string; runId: string; computedAt: string; score: WalletScore }>> {
   const rows = (await db.prepare(
     `SELECT s.wallet, s.run_id, s.computed_at, s.result FROM scores s
