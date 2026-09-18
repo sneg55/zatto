@@ -39,10 +39,8 @@ export function BaseRateTable({ rates }: { rates: BaseRate[] }) {
       </div>
       <p className="foot-note">
         Every entry Zatto has measured on Base, {total} of them, one row per token minute so a fleet counts once.
-        Return is a delayed entry one minute after the Smart Money buy, held 24 hours. A band under{" "}
-        {MIN_RATE_OBSERVATIONS} entries states its count and no rate. Tokens reach this table through the Nansen
-        Smart Money screener, which selects on Smart Money activity rather than on price, but it is a selection and
-        the rates should be read as conditional on it.
+        Return is a delayed entry one minute after the Smart Money buy, held 24 hours. Tokens reach this table
+        through the Nansen Smart Money screener, which selects on Smart Money activity rather than on price.
       </p>
     </>
   );

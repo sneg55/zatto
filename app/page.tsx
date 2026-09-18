@@ -105,9 +105,7 @@ export default async function Home() {
         <section className="section" id="evidence">
           <h2 className="display-sub">What a burst has been worth</h2>
           <p style={{ maxWidth: "68ch", marginTop: 0 }}>
-            The only forward-looking thing Zatto says is a base rate: of the entries it has already measured at this
-            burst, how many were higher a day later. It is not a forecast, and a band with few entries says so
-            rather than quoting a number.
+            Of the entries Zatto has already measured at a given burst, how many were higher a day later.
           </p>
           <BaseRateTable rates={run.rates} />
         </section>

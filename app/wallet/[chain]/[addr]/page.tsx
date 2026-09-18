@@ -89,7 +89,7 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
               {snap.score.n > 0 && snap.score.n < MIN_USABLE_BUYS ? (
                 <p className="foot-note">
                   THIN because {snap.score.n} scored {snap.score.n === 1 ? "buy is" : "buys are"} under the floor of{" "}
-                  {MIN_USABLE_BUYS}. The numbers below are real, there are just too few of them to call a verdict on.
+                  {MIN_USABLE_BUYS}.
                 </p>
               ) : null}
 

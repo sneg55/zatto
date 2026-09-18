@@ -14,9 +14,8 @@ export function PaidScan({ chain, baseUrl }: { chain: string; baseUrl: string })
         signs the transfer authorisation, and the scan starts as soon as it settles.
       </p>
       <p className="foot-note" style={{ marginTop: 0 }}>
-        Worth knowing before you pay: a run re-reads the screener, so back-to-back runs share most of their wallets,
-        and a 24 hour return cannot be hurried. What a paid run buys is a fresh read of the tape, which moves the
-        Forming now board to the last few hours rather than the last cron.
+        A run re-reads the screener, so back-to-back runs share most of their wallets. What a paid run buys is a
+        fresh read of the tape, which moves the Forming now board to the last few hours rather than the last cron.
       </p>
 
       <PayScan chain={chain} priceLabel={priceLabel} />

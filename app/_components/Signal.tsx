@@ -15,8 +15,8 @@ export function Signal({ rate, burst, at, subject }: { rate: BaseRate | null; bu
         </>
       ) : (
         <>
-          Zatto has measured {rate.n} {rate.n === 1 ? "entry" : "entries"} in the {rate.label} band so far, under the{" "}
-          {MIN_RATE_OBSERVATIONS} it takes to state a rate, so there is no base rate to quote yet.
+          Zatto has measured {rate.n} {rate.n === 1 ? "entry" : "entries"} in the {rate.label} band, under the{" "}
+          {MIN_RATE_OBSERVATIONS} it takes to state a rate.
         </>
       )}
     </p>
@@ -27,7 +27,7 @@ export function NoSignal({ threshold, hours, subject }: { threshold: number; hou
   return (
     <p className="signal signal-quiet">
       No Smart Money entry in {subject} has drawn {threshold} times the prior-hour buyer rate in the last {hours}{" "}
-      hours. That is the ordinary state, not a failure to read.
+      hours.
     </p>
   );
 }

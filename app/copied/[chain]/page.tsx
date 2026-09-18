@@ -73,10 +73,8 @@ export default async function CopiedPage({ params }: { params: Promise<{ chain: 
                 returned {fmtPct(test.restLaterMedian)}, {test.restLaterHigher} of {test.restLater} higher.
               </p>
               <p className="foot-note" style={{ marginTop: 12 }}>
-                That is a split-half test over {test.actors} actors, rank correlation{" "}
-                {test.spearman == null ? "n/a" : test.spearman.toFixed(2)} between the two halves. It says past copy
-                returns separated later ones on the sample measured so far. It does not say the wallet at the top
-                will keep paying, and the sample is small enough that one actor moves it.
+                Split-half test over {test.actors} actors, rank correlation{" "}
+                {test.spearman == null ? "n/a" : test.spearman.toFixed(2)} between the halves.
               </p>
             </section>
           ) : null}
@@ -137,8 +135,7 @@ export default async function CopiedPage({ params }: { params: Promise<{ chain: 
 
           <p className="foot-note">
 Both return columns are medians of entering one minute after the wallet, held 24 hours, over the buys
-            that carry a settled price. They say what following the wallet would have paid, not what the wallet
-            itself made. A median over one or two buys is one or two observations, not a rate.
+            that carry a settled price. They measure following the wallet, not what the wallet itself made.
           </p>
         </>
       )}
