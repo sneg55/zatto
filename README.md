@@ -112,9 +112,9 @@ npx wrangler login
 npx wrangler d1 create zatto
 ```
 
-Paste the database id the last command prints into `wrangler.jsonc`, replacing `REPLACE_AFTER_wrangler_d1_create`.
+`wrangler.jsonc` is checked in carrying the deployed instance's own `database_id`. Replace it with the id the last command prints, or the deploy points at a database your account cannot reach.
 
-In the same file, replace the `PUBLIC_BASE_URL` var, which ships as `https://zatto.REPLACE.workers.dev`, with the URL the Worker will be deployed to. It is the host the scan step trigger calls and the host in the scan URL a payer gets back, so every request fails with a message pointing here until it is set.
+Replace `PUBLIC_BASE_URL` in the same file, checked in as `https://zatto.nsawinyh.workers.dev`, with the URL your Worker will answer on. It is the host the scan step trigger calls and the host in the scan URL a payer gets back, so leaving it pointed at someone else's deployment breaks every run.
 
 ```
 npm run cf-typegen
