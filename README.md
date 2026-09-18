@@ -55,8 +55,8 @@ A burst settles `BURST_MINUTES + MATURITY_MINUTES` after the buy. A return needs
 flowchart LR
   U["Browser"]
   subgraph cf["Cloudflare"]
-    W["Worker&#8203;<br/>Next.js 16 via OpenNext"]
-    D[("D1&#8203;<br/>hour-bucketed tape,<br/>scores, observations, jobs")]
+    W["Worker<br/>Next.js 16 via OpenNext"]
+    D[("D1<br/>hour-bucketed tape,<br/>scores, observations, jobs")]
     C(["Cron, every 5 min"])
   end
   N["Nansen API"]
