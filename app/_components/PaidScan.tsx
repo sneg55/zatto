@@ -11,11 +11,11 @@ export function PaidScan({ chain, baseUrl }: { chain: string; baseUrl: string })
       <p style={{ maxWidth: "62ch" }}>
         Cron opens a {chain} run at 00:00, 08:00 and 16:00 UTC. To start one between those, pay{" "}
         <strong>{priceLabel}</strong> from your own wallet. Zatto answers 402 with x402 payment terms, your wallet
-        signs the transfer authorisation, and the scan starts as soon as it settles.
+        signs the transfer, and the scan starts as soon as it settles.
       </p>
       <p className="foot-note" style={{ marginTop: 0 }}>
-        A run re-reads the screener, so back-to-back runs share most of their wallets. What a paid run buys is a
-        fresh read of the tape, which moves the Forming now board to the last few hours rather than the last cron.
+        What you get for it is a fresh read of the tape, which moves the Forming now board to the last few hours
+        rather than the last cron.
       </p>
 
       <PayScan chain={chain} priceLabel={priceLabel} />

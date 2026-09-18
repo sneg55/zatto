@@ -1,6 +1,6 @@
 # Zatto
 
-Point it at a Smart Money wallet and it tells you how many new buyers show up after it buys, how fast, and what buying after it would have returned.
+Point it at a Base token and it tells you which Smart Money wallets bought it, how many new buyers arrived in the 10 minutes after each buy, and what tokens at that level of buying have done a day later. Point it at a wallet and it tells you who buys behind it and what copying it returned.
 
 Built for the Nansen Meridian Buildathon (Sep 14-27, 2026). Powered by Nansen API.
 
@@ -114,6 +114,16 @@ In both cases, the resolution is manual. Check the payment nonce against the fac
 
 ## Method
 
+The site itself carries no methodology section: it states the answer and links back here. The labels it uses map onto the terms below.
+
+| On the site | In this file and in the code |
+|---|---|
+| Buyers vs normal | `crowdRatio10`, the burst ratio |
+| Copy return | the delayed entry, `DELAYED_ENTRY_SECONDS` after the wallet's buy |
+| The wallet's own | the leader return, priced at the wallet's own fill |
+| Cluster | an address fleet, wallets carrying byte-identical buy lists |
+| Entry | one token minute, after repeated swaps inside an hour collapse |
+
 Constants live in `lib/score/constants.ts`. They are choices made for this build, not measurements of anything:
 
 | Constant | Value | Meaning |
@@ -168,6 +178,14 @@ Measured on 2026-09-16 over 429 entries on Base, one row per token minute so a f
 The signal sits at `SIGNAL_RATIO` and above. Everything below it is close to a coin flip, which is why the 3x `CROWD_RATIO` tag on the boards is descriptive only and carries no claim about price. The 5x band held its share as the sample grew from 16 entries to 21, and at 8x and above it was 10 of 10 tokens with 8 higher.
 
 Two limits worth stating plainly. The 1 hour horizon carries almost nothing, +1.4% against +0.3%, so this is a next-day effect and not an intraday one. And tokens reach the table through the Nansen Smart Money screener, which selects on Smart Money activity rather than on price; the rates are conditional on that selection.
+
+## Does the wallet ranking hold
+
+`/copied/base` ranks wallets by what copying them returned, and the page states a split-half test of that ranking instead of a caveat. Each wallet's settled buys are split in half by time, wallets are ranked on the early half, and the later halves of the leaders are pooled against the later halves of everyone else. A wallet needs `MIN_COPY_BUYS` priced buys to be ranked at all.
+
+Read live on 2026-09-18, with 26 of 55 wallets clearing the floor: the top 5 on their earlier buys returned a median +49.0% on their later ones, 18 of 22 higher at 24 hours, against -8.0% and 38 of 108 for the other 21.
+
+The Spearman rank correlation between the halves, measured on 2026-09-17, was +0.319, and +0.238 with the strongest wallet dropped. Pearson on the same data reads +0.665; the rank correlation is the one to quote, because a single outsized return dominates the linear figure.
 
 ## Forming now
 

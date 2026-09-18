@@ -10,8 +10,8 @@ export function BaseRateTable({ rates }: { rates: BaseRate[] }) {
         <table className="data data-cards">
           <thead>
             <tr>
-              <th>Burst band</th>
-              <th className="num">Entries</th>
+              <th>Buyers vs normal</th>
+              <th className="num">Buys</th>
               <th className="num">Tokens</th>
               <th className="num">Higher at 24h</th>
               <th className="num">Median</th>
@@ -22,12 +22,12 @@ export function BaseRateTable({ rates }: { rates: BaseRate[] }) {
           <tbody>
             {rates.map((r) => (
               <tr key={r.label} className={r.min >= SIGNAL_RATIO ? undefined : "row-muted"}>
-                <td data-label="Burst band" className="lead">{r.label}</td>
-                <td data-label="Entries" className="num">{r.n}</td>
+                <td data-label="Buyers vs normal" className="lead">{r.label}</td>
+                <td data-label="Buys" className="num">{r.n}</td>
                 <td data-label="Tokens" className="num">{r.tokens}</td>
                 <td data-label="Higher at 24h" className="num">
                   {r.n ? `${r.higher} of ${r.n}` : "n/a"}
-                  {r.n && !r.statable ? <span className="cell-note">too few to state a rate</span> : null}
+                  {r.n && !r.statable ? <span className="cell-note">too few to call</span> : null}
                 </td>
                 <td data-label="Median" className="num">{r.statable ? fmtPct(r.median) : "n/a"}</td>
                 <td data-label="Worst" className="num">{r.statable ? fmtPct(r.worst) : "n/a"}</td>
@@ -38,9 +38,8 @@ export function BaseRateTable({ rates }: { rates: BaseRate[] }) {
         </table>
       </div>
       <p className="foot-note">
-        Every entry Zatto has measured on Base, {total} of them, one row per token minute so a fleet counts once.
-        Return is a delayed entry one minute after the Smart Money buy, held 24 hours. Tokens reach this table
-        through the Nansen Smart Money screener, which selects on Smart Money activity rather than on price.
+        Every Smart Money buy Zatto has measured on Base, {total} of them. The return is what buying one minute
+        after it and holding a day would have made.
       </p>
     </>
   );

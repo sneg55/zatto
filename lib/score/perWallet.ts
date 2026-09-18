@@ -33,8 +33,8 @@ export function scoreWallet(chain: string, wallet: string, buys: BuyScore[]): Wa
   const crowdedShare = n ? crowded.length / n : null;
   const verdict: Verdict = n < MIN_USABLE_BUYS ? "THIN" : crowdedShare! > 0.5 ? "CROWDED" : "QUIET";
   const returnNote = !delayed24h.crowded.insufficient && !delayed24h.uncrowded.insufficient
-    ? `delayed entry after crowded buys returned ${pct(delayed24h.crowded.median!)} vs ${pct(delayed24h.uncrowded.median!)} after quiet buys`
-    : "not enough mature buys in one group to compare";
+    ? `Buying one minute after its crowded buys returned ${pct(delayed24h.crowded.median!)}, against ${pct(delayed24h.uncrowded.median!)} after the quiet ones`
+    : "Not enough priced buys in one group to compare";
   return {
     chain, wallet, n, nCrowded: crowded.length, nUncrowded: uncrowded.length,
     tokens: new Set(usable.map((b) => b.token)).size, excluded,

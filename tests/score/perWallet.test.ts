@@ -32,9 +32,9 @@ describe("scoreWallet", () => {
     const s = scoreWallet("base", "0xw", [mk({ crowded: true, d24: 0.1 }), mk({ crowded: true, d24: 0.2 }), mk({ crowded: false, d24: -0.1 }), mk({ crowded: false, d24: -0.2 }), mk({ crowded: false, d24: -0.3 })]);
     expect(s.delayed24h.crowded.insufficient).toBe(true);
     expect(s.delayed24h.uncrowded.median).toBeCloseTo(-0.2);
-    expect(s.returnNote).toMatch(/not enough mature buys/);
+    expect(s.returnNote).toMatch(/Not enough priced buys/);
     const t = scoreWallet("base", "0xw", [mk({ crowded: true, d24: 0.1 }), mk({ crowded: true, d24: 0.2 }), mk({ crowded: true, d24: 0.3 }), mk({ crowded: false, d24: -0.1 }), mk({ crowded: false, d24: -0.2 }), mk({ crowded: false, d24: -0.3 })]);
-    expect(t.returnNote).toMatch(/delayed entry after crowded buys returned \+20\.0% vs -20\.0% after quiet buys/);
+    expect(t.returnNote).toMatch(/Buying one minute after its crowded buys returned \+20\.0%, against -20\.0% after the quiet ones/);
   });
   it("ignores null returns inside a group and null fast shares in the mean", () => {
     const s = scoreWallet("base", "0xw", [mk({ crowded: true, d24: null, fastShare: null }), mk({ crowded: true, d24: 0.2 }), mk({ crowded: true, d24: 0.4 }), mk({ crowded: true, d24: 0.6 }), mk({ crowded: false }), mk({ crowded: false })]);

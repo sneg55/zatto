@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { getDb } from "@/lib/db/d1";
-import { latestPublishedJob, readObservations, readScoresForRun } from "@/lib/db/queries";
+import { latestPublishedJob, readObservations } from "@/lib/db/queries";
 import { WalletLookup } from "@/app/_components/WalletLookup";
-import { CROWD_RATIO } from "@/lib/score/constants";
 import { baseRates } from "@/lib/score/baseRates";
 import { BaseRateTable } from "@/app/_components/BaseRateTable";
 
@@ -12,13 +11,7 @@ async function latest() {
   const db = getDb();
   const job = await latestPublishedJob(db, "base");
   if (!job) return null;
-  const rows = await readScoresForRun(db, "base", job.run_id);
-  if (rows.length === 0) return null;
-  return {
-    rates: baseRates(await readObservations(db, "base")),
-    wallets: rows.length,
-    crowdedWallets: rows.filter((r) => r.verdict === "CROWDED").length,
-  };
+  return { rates: baseRates(await readObservations(db, "base")) };
 }
 
 export default async function Home() {
@@ -28,86 +21,32 @@ export default async function Home() {
     <main>
       <section className="hero">
         <div className="hero-copy">
-          <h1 className="display-hero">Who gets copied</h1>
+          <h1 className="display-hero">Is anyone buying in behind Smart Money?</h1>
           <p className="lede">
-            Point Zatto at a Smart Money wallet and it tells you how many new buyers show up after it buys, how
-            fast they arrive, and what buying one minute behind it would have returned. Point it at a token and it
-            tells you which Smart Money wallets bought it and how hard buying crowded after each one.
+            Paste a Base token. Zatto shows every Smart Money buy in it, how many new buyers arrived in the 10
+            minutes after each one, and what tokens at that level of buying have done a day later.
           </p>
           <div style={{ marginTop: 28 }}>
             <WalletLookup chain="base" />
           </div>
           <p className="link-row" style={{ marginTop: 20, marginBottom: 0 }}>
-            <Link href="/copied/base">Or see what copying each wallet returned</Link>
+            <Link href="/copied/base">What copying each wallet returned</Link>
             <span className="divider-dot">&middot;</span>
             <Link href="/scan/base">Base leaderboard</Link>
-            <span className="divider-dot">&middot;</span>
-            <Link href="#method">How it measures</Link>
           </p>
         </div>
-
       </section>
 
       {run ? (
         <section className="section" id="evidence">
-          <h2 className="display-sub">What a burst has been worth</h2>
+          <h2 className="display-sub">What each level has been worth</h2>
           <p style={{ maxWidth: "68ch", marginTop: 0 }}>
-            Of the entries Zatto has already measured at a given burst, how many were higher a day later.
+            New buyers in the 10 minutes after a Smart Money buy, against the token&apos;s normal rate, and how
+            often the token was higher 24 hours later.
           </p>
           <BaseRateTable rates={run.rates} />
         </section>
       ) : null}
-
-      <section className="section" id="method">
-        <h2 className="display-sub">How it measures</h2>
-        <ul className="card-list">
-          <li className="card">
-            <p>
-              New buyers: distinct addresses that buy the same token within 10, 30 and 60 minutes after the
-              wallet&apos;s buy, against the token&apos;s prior-hour rate.
-            </p>
-          </li>
-          <li className="card">
-            <p>
-              Burst: new buyers in the 10 minutes after the buy, against that prior-hour rate scaled to the same 10
-              minutes. Fast arrivals: the share arriving within 20 seconds.
-            </p>
-          </li>
-          <li className="card">
-            <p>
-              Returns: the token&apos;s price from the wallet&apos;s fill, and from a delayed entry one minute
-              later, at 1 hour and 24 hours.
-            </p>
-          </li>
-        </ul>
-      </section>
-
-      <section className="section section-band" style={{ borderRadius: "var(--radius)", paddingInline: 28 }}>
-        <h2 className="display-sub">Verdicts</h2>
-        <p className="link-row" style={{ marginBottom: 16 }}>
-          <span className="tag tag-crowded">CROWDED</span>
-          <span className="tag tag-quiet">QUIET</span>
-          <span className="tag tag-thin">THIN</span>
-        </p>
-        <p style={{ maxWidth: "68ch" }}>
-          A token is CROWDED when at least one scored entry drew {CROWD_RATIO} times the token&apos;s prior-hour
-          buyer rate in the 10 minutes after it, and QUIET when none did. Wallets carry the same words on a stricter
-          rule: CROWDED needs more than half of the wallet&apos;s own scored buys to clear that bar, and THIN means
-          under four scored buys.
-          {run ? (
-            <>
-              {" "}Wallets clearing the wallet rule on the latest run: {run.crowdedWallets} of {run.wallets},
-              because crowding concentrates in tokens rather than spreading across a wallet&apos;s whole book.
-            </>
-          ) : null}
-        </p>
-        <p style={{ maxWidth: "68ch" }}>
-          A wallet&apos;s repeated swaps into one token inside an hour count as one buy. The return comparison is
-          pooled across the run and stated only when both groups hold at least three mature buys. Returns need 24
-          hours to settle, so every scored buy on a board is at least two days old. The Forming now panel on a run
-          carries the newer buys, with a burst and no return.
-        </p>
-      </section>
     </main>
   );
 }

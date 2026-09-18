@@ -52,13 +52,19 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
 
       {scan ? (
         <>
+          {hardest ? (
+            <section className="signal-band">
+              <Signal rate={rateFor(rates, hardest.burst)} burst={hardest.burst} at={hardest.ts} subject={name} />
+            </section>
+          ) : null}
+
           <div className="meta-block">
             <div className="meta-item">
               <span className="meta-label">Smart Money buys</span>
               <span className="meta-value">{scan.smartMoneyBuys}</span>
             </div>
             <div className="meta-item">
-              <span className="meta-label">Distinct entries</span>
+              <span className="meta-label">Entries</span>
               <span className="meta-value">{scan.entries}</span>
             </div>
             <div className="meta-item">
@@ -66,7 +72,7 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
               <span className="meta-value">{scan.wallets.length}</span>
             </div>
             <div className="meta-item">
-              <span className="meta-label">Reaches back</span>
+              <span className="meta-label">Window</span>
               <span className="meta-value">{fmtSpan(scan.window?.from ?? null, scan.window?.to ?? null)}</span>
             </div>
             <div className="meta-item">
@@ -79,29 +85,22 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
             </div>
           </div>
 
-          {hardest ? (
-            <section className="signal-band">
-              <Signal rate={rateFor(rates, hardest.burst)} burst={hardest.burst} at={hardest.ts} subject={name} />
-            </section>
-          ) : null}
-
           <p className="page-verdict">
             Smart Money bought {name} {scan.smartMoneyBuys}{" "}
-            {scan.smartMoneyBuys === 1 ? "time" : "times"} over the{" "}
-            {fmtSpan(scan.window?.from ?? null, scan.window?.to ?? null)} this scan reaches back, from{" "}
-            {scan.wallets.length} {scan.wallets.length === 1 ? "wallet" : "wallets"}. Repeated swaps by one wallet
-            inside an hour count once, which leaves {scan.entries}{" "}
-            {scan.entries === 1 ? "entry" : "entries"}, and {crowded} of them drew at least {CROWD_RATIO} times the
-            token&apos;s prior-hour buyer rate in the 10 minutes after.
+            {scan.smartMoneyBuys === 1 ? "time" : "times"} in the last{" "}
+            {fmtSpan(scan.window?.from ?? null, scan.window?.to ?? null)}, from {scan.wallets.length}{" "}
+            {scan.wallets.length === 1 ? "wallet" : "wallets"}. Repeat swaps inside an hour count once, which leaves{" "}
+            {scan.entries} {scan.entries === 1 ? "entry" : "entries"}, and {crowded} of them pulled at least{" "}
+            {CROWD_RATIO}x the token&apos;s normal buyer rate in the 10 minutes after.
           </p>
 
           <p className="foot-note" style={{ marginTop: 12 }}>
             {settled
-              ? `${settled} of those entries are old enough to carry a settled 24 hour return.`
-              : "None of those entries is old enough yet to carry a settled 24 hour return."}
+              ? `${settled} of them are old enough to carry a 24 hour return.`
+              : "None of them is old enough yet to carry a 24 hour return."}
             {scan.truncated
-              ? ` This reads the newest ${TOKEN_SCAN_ENTRIES} entries rather than the whole ${TOKEN_SCAN_DAYS} day window, because the token had more than that.`
-              : ` That is every Smart Money entry in the ${TOKEN_SCAN_DAYS} day window.`}
+              ? ` This reads the newest ${TOKEN_SCAN_ENTRIES} entries, not the whole ${TOKEN_SCAN_DAYS} days.`
+              : ` That is every Smart Money buy in the last ${TOKEN_SCAN_DAYS} days.`}
           </p>
 
           {scan.forming.length ? (
@@ -110,7 +109,7 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
               rows={scan.forming}
               symbols={symbols}
               subject={`Smart Money buys in ${name}`}
-              title="Entries too recent to carry a return"
+              title="Too new to price"
             />
           ) : null}
 
@@ -118,30 +117,26 @@ export default async function TokenPage({ params }: { params: Promise<{ chain: s
             <section className="section">
               <h2 className="display-sub">What followed each entry</h2>
               <p className="foot-note" style={{ marginTop: 0 }}>
-                Every Smart Money entry old enough for its 24 hour return to settle, with the burst it drew. The
-                token is CROWDED when at least one of them cleared {CROWD_RATIO}x the prior-hour buyer rate.
+                Every Smart Money buy old enough to carry a 24 hour return, with the buyers it pulled in.
               </p>
               <TokenBoard chain={chain} tokens={[scan.stat]} quiet={[]} symbols={symbols} cluster={{}} />
             </section>
           ) : (
             <p className="foot-note">
-              No Smart Money entry in this token is old enough for a settled 24 hour return yet.
+              No Smart Money buy in this token is old enough for a 24 hour return yet.
             </p>
           )}
 
           <ScanButton chain={chain} token={token} label="Scan it again" />
-          <p className="foot-note">
-            A scan reads every Smart Money buy in the token over {TOKEN_SCAN_DAYS} days, then the tape around each
-            entry. Results are cached for an hour.
-          </p>
+          <p className="foot-note">Results are cached for an hour.</p>
         </>
       ) : (
         <div className="empty-state">
           <p className="eyebrow">Not scanned yet</p>
           <h1>{shortAddr(token)}</h1>
           <p>
-            Zatto has no scan of this token. A scan reads every Smart Money buy in it over the last{" "}
-            {TOKEN_SCAN_DAYS} days and measures the burst of new buyers that followed each one.
+            Zatto has not scanned this token. A scan reads every Smart Money buy in it over the last{" "}
+            {TOKEN_SCAN_DAYS} days and counts the new buyers that arrived behind each one.
           </p>
           <ScanButton chain={chain} token={token} label="Scan this token" />
         </div>

@@ -40,7 +40,7 @@ export function TokenBoard({
 
           <div className="token-stats">
             <span className="token-stat">
-              <span className="token-stat-label">Hardest burst</span>
+              <span className="token-stat-label">Peak buyers vs normal</span>
               <span className="token-stat-value">{fmtRatio(t.maxBurst)}</span>
             </span>
             <span className="token-stat">
@@ -52,11 +52,11 @@ export function TokenBoard({
               <span className="token-stat-value">{t.wallets}</span>
             </span>
             <span className="token-stat">
-              <span className="token-stat-label">Delayed 24h, median</span>
+              <span className="token-stat-label">Copy return, 24h</span>
               <span className="token-stat-value"><Delta value={t.medianDelayed24h} /></span>
             </span>
             <span className="token-stat">
-              <span className="token-stat-label">Newest entry</span>
+              <span className="token-stat-label">Newest buy</span>
               <span className="token-stat-value">{fmtAge(t.newest)}</span>
             </span>
           </div>
@@ -72,8 +72,8 @@ export function TokenBoard({
                   <tr>
                     <th>Wallet</th>
                     <th>Entered</th>
-                    <th className="num">Burst</th>
-                    <th className="num">Delayed 24h</th>
+                    <th className="num">Buyers vs normal</th>
+                    <th className="num">Copy return, 24h</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -83,17 +83,17 @@ export function TokenBoard({
                       <tr key={`${e.wallet}|${e.ts}`}>
                         <td data-label="Wallet" className="lead">
                           <Link href={walletHref(chain, e.wallet, runId)} className="wallet-addr">{shortAddr(e.wallet)}</Link>
-                          {peers ? <span className="cell-note">one of {peers} wallets buying in lockstep</span> : null}
+                          {peers ? <span className="cell-note">one of {peers} wallets in a cluster</span> : null}
                         </td>
                         <td data-label="Entered">
                           {fmtDateTime(e.ts)}
                           <span className="cell-note">{fmtAge(e.ts)}</span>
                         </td>
-                        <td data-label="Burst" className="num">
+                        <td data-label="Buyers vs normal" className="num">
                           {fmtRatio(e.burst)}
                           {e.crowded ? <span className="cell-note">crowded</span> : null}
                         </td>
-                        <td data-label="Delayed 24h" className="num"><Delta value={e.delayed24h} /></td>
+                        <td data-label="Copy return, 24h" className="num"><Delta value={e.delayed24h} /></td>
                       </tr>
                     );
                   })}
@@ -107,7 +107,7 @@ export function TokenBoard({
 
     {quiet.length ? (
       <details className="quiet-tokens">
-        <summary>Tokens that took no entry into a burst: {quiet.length} more</summary>
+        <summary>Tokens where nobody followed: {quiet.length} more</summary>
         <div className="table-wrap">
           <table className="data data-cards">
             <thead>
@@ -115,9 +115,9 @@ export function TokenBoard({
                 <th>Token</th>
                 <th className="num">Scored buys</th>
                 <th className="num">Wallets</th>
-                <th className="num">Burst, median</th>
-                <th className="num">Delayed 24h, median</th>
-                <th className="num">Newest entry</th>
+                <th className="num">Buyers vs normal</th>
+                <th className="num">Copy return, 24h</th>
+                <th className="num">Newest buy</th>
               </tr>
             </thead>
             <tbody>
@@ -134,9 +134,9 @@ export function TokenBoard({
                   </td>
                   <td data-label="Scored buys" className="num">{t.buys}</td>
                   <td data-label="Wallets" className="num">{t.wallets}</td>
-                  <td data-label="Burst, median" className="num">{fmtRatio(t.medianBurst)}</td>
-                  <td data-label="Delayed 24h, median" className="num"><Delta value={t.medianDelayed24h} /></td>
-                  <td data-label="Newest entry" className="num">{fmtAge(t.newest)}</td>
+                  <td data-label="Buyers vs normal" className="num">{fmtRatio(t.medianBurst)}</td>
+                  <td data-label="Copy return, 24h" className="num"><Delta value={t.medianDelayed24h} /></td>
+                  <td data-label="Newest buy" className="num">{fmtAge(t.newest)}</td>
                 </tr>
               ))}
             </tbody>

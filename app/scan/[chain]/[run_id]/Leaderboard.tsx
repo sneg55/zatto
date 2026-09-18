@@ -13,9 +13,9 @@ type Column = {
 };
 
 const COLUMNS: Column[] = [
-  { key: "burst", label: "Burst, 10 min", num: true, sort: (r) => r.burstRatio ?? -Infinity },
+  { key: "burst", label: "Buyers vs normal", num: true, sort: (r) => r.burstRatio ?? -Infinity },
   { key: "newBuyers", label: "New buyers per buy", num: true, sort: (r) => r.newBuyersPerBuy ?? -Infinity },
-  { key: "baseline", label: "Baseline per hour", num: true, sort: (r) => r.baselinePerBuy ?? -Infinity },
+  { key: "baseline", label: "Normal rate per hour", num: true, sort: (r) => r.baselinePerBuy ?? -Infinity },
   { key: "fast", label: "Fast arrivals", num: true, sort: (r) => r.fastShare.mean ?? -Infinity },
   { key: "crowded", label: "Crowded buys", num: true, sort: (r) => r.nCrowded },
   { key: "scored", label: "Scored", num: true, sort: (r) => r.n },
@@ -68,9 +68,9 @@ export function Leaderboard({ chain, runId, rows, cluster }: { chain: string; ru
                     {peers ? <span className="cell-note">same buys as {peers - 1} other {peers === 2 ? "wallet" : "wallets"}</span> : null}
                   </td>
                   <td data-label="Verdict"><VerdictTag verdict={r.verdict} provisional={r.provisional} /></td>
-                  <td data-label="Burst, 10 min" className="num">{fmtRatio(r.burstRatio)}</td>
+                  <td data-label="Buyers vs normal" className="num">{fmtRatio(r.burstRatio)}</td>
                   <td data-label="New buyers per buy" className="num">{fmtNum(r.newBuyersPerBuy)}</td>
-                  <td data-label="Baseline per hour" className="num">{fmtNum(r.baselinePerBuy)}</td>
+                  <td data-label="Normal rate per hour" className="num">{fmtNum(r.baselinePerBuy)}</td>
                   <td data-label="Fast arrivals" className="num">{r.fastShare.mean == null ? "n/a" : fmtPct(r.fastShare.mean)}</td>
                   <td data-label="Crowded buys" className="num">{r.n ? `${r.nCrowded} of ${r.n}` : "n/a"}</td>
                   <td data-label="Scored" className="num">

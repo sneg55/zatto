@@ -6,7 +6,7 @@ import { isAddress } from "@/lib/chains";
 type Subject = "wallet" | "token";
 
 export function WalletLookup({ chain }: { chain: string }) {
-  const [subject, setSubject] = useState<Subject>("wallet");
+  const [subject, setSubject] = useState<Subject>("token");
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
@@ -16,14 +16,14 @@ export function WalletLookup({ chain }: { chain: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         const addr = value.trim();
-        if (!isAddress(addr)) { setError(`That is not a 0x ${subject} address.`); return; }
+        if (!isAddress(addr)) { setError("That is not a 0x address."); return; }
         setError("");
         router.push(`/${subject}/${chain}/${addr.toLowerCase()}`);
       }}
     >
-      <label className="lookup-label" htmlFor="address-lookup">Score any {chain} address</label>
+      <label className="lookup-label" htmlFor="address-lookup">Check a {chain} token or wallet</label>
       <div className="segmented" role="group" aria-label="What to score">
-        {(["wallet", "token"] as Subject[]).map((s) => (
+        {(["token", "wallet"] as Subject[]).map((s) => (
           <button
             key={s}
             type="button"
@@ -31,7 +31,7 @@ export function WalletLookup({ chain }: { chain: string }) {
             aria-pressed={subject === s}
             onClick={() => { setSubject(s); setError(""); }}
           >
-            {s === "wallet" ? "Wallet" : "Token"}
+            {s === "token" ? "Token" : "Wallet"}
           </button>
         ))}
       </div>
@@ -41,16 +41,16 @@ export function WalletLookup({ chain }: { chain: string }) {
           className="input"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="0x…"
+          placeholder={subject === "token" ? "Contract address 0x…" : "Wallet address 0x…"}
           spellCheck={false}
           autoComplete="off"
         />
-        <button className="btn" type="submit">Score it</button>
+        <button className="btn" type="submit">Check it</button>
       </div>
       <p className="lookup-note">
-        {subject === "wallet"
-          ? "Who shows up after this wallet buys, and what a delayed entry behind it returned."
-          : "Which Smart Money wallets bought this token, and how hard buying crowded after each one."}
+        {subject === "token"
+          ? "Which Smart Money wallets bought it, and how many new buyers arrived behind each one."
+          : "Who buys after this wallet does, and what copying it one minute later returned."}
       </p>
       {error ? <p className="status-note">{error}</p> : null}
     </form>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { BurstScore } from "@/lib/score/types";
 import { fmtAge, fmtDateTime, fmtRatio, shortAddr } from "@/lib/format";
 import { dexscreenerToken, explorerToken, nansenToken, walletHref } from "@/lib/chains";
-import { BURST_SETTLE_MINUTES, CROWD_RATIO, FORMING_WINDOW_HOURS } from "@/lib/score/constants";
+import { CROWD_RATIO, FORMING_WINDOW_HOURS } from "@/lib/score/constants";
 
 export function Forming({
   chain,
@@ -25,10 +25,9 @@ export function Forming({
     <section className="forming">
       <h2 className="display-sub">{title ?? "Forming now"}</h2>
       <p className="foot-note" style={{ marginTop: 0 }}>
-        {subject ?? `Buys from the last ${FORMING_WINDOW_HOURS} hours by the wallets in this run`}, too recent to
-        carry a return. A burst settles {BURST_SETTLE_MINUTES} minutes after the buy, a 24 hour return needs a day,
-        so these rows say who arrived and say nothing about what it paid. Cleared {CROWD_RATIO}x: {crowded} of{" "}
-        {rows.length}.
+        {subject ?? `Buys from the last ${FORMING_WINDOW_HOURS} hours by the wallets in this run`}, too new to
+        carry a 24 hour return. These rows say who showed up, not what it paid. Pulled {CROWD_RATIO}x or more:{" "}
+        {crowded} of {rows.length}.
       </p>
       <div className="table-wrap">
         <table className="data data-cards">
@@ -37,7 +36,7 @@ export function Forming({
               {oneToken ? null : <th>Token</th>}
               <th>Wallet</th>
               <th>Bought</th>
-              <th className="num">Burst</th>
+              <th className="num">Buyers vs normal</th>
               <th className="num">New buyers, 10 min</th>
             </tr>
           </thead>
@@ -62,13 +61,13 @@ export function Forming({
                   {fmtAge(r.ts)}
                   <span className="cell-note">{fmtDateTime(r.ts)}</span>
                 </td>
-                <td data-label="Burst" className="num">
+                <td data-label="Buyers vs normal" className="num">
                   {fmtRatio(r.burst)}
                   {r.crowded ? <span className="cell-note">crowded</span> : null}
                 </td>
                 <td data-label="New buyers, 10 min" className="num">
                   {r.newBuyers10}
-                  <span className="cell-note">{r.baselineRate} in the prior hour</span>
+                  <span className="cell-note">{r.baselineRate} in the hour before</span>
                 </td>
               </tr>
             ))}

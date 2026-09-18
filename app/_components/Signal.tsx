@@ -6,17 +6,17 @@ export function Signal({ rate, burst, at, subject }: { rate: BaseRate | null; bu
   if (!rate) return null;
   return (
     <p className="signal">
-      {subject} took a Smart Money entry {fmtAge(at)} that drew {fmtRatio(burst)} the token&apos;s prior-hour buyer
-      rate in the 10 minutes after.{" "}
+      A Smart Money wallet bought {subject} {fmtAge(at)}, and {fmtRatio(burst)} the token&apos;s normal buyer rate
+      showed up in the 10 minutes after.{" "}
       {rate.statable ? (
         <>
-          Of the {rate.n} entries Zatto has measured in the {rate.label} band across {rate.tokens} tokens,{" "}
-          {rate.higher} were higher 24 hours later. Median {fmtPct(rate.median)}, worst {fmtPct(rate.worst)}.
+          Of the {rate.n} buys Zatto has measured at {rate.label} across {rate.tokens} tokens, {rate.higher} were
+          higher 24 hours later. Median {fmtPct(rate.median)}, worst {fmtPct(rate.worst)}.
         </>
       ) : (
         <>
-          Zatto has measured {rate.n} {rate.n === 1 ? "entry" : "entries"} in the {rate.label} band, under the{" "}
-          {MIN_RATE_OBSERVATIONS} it takes to state a rate.
+          Zatto has measured {rate.n} {rate.n === 1 ? "buy" : "buys"} at {rate.label}, under the{" "}
+          {MIN_RATE_OBSERVATIONS} it takes to call a rate.
         </>
       )}
     </p>

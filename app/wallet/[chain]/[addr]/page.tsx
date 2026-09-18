@@ -58,7 +58,7 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
             </div>
             <div className="meta-item">
               <span className="meta-label">New buyers per buy</span>
-              <span className="meta-value">{fmtNum(snap.score.newBuyersPerBuy)} vs {fmtNum(snap.score.baselinePerBuy)} per hour baseline</span>
+              <span className="meta-value">{fmtNum(snap.score.newBuyersPerBuy)} against a normal rate of {fmtNum(snap.score.baselinePerBuy)} an hour</span>
             </div>
             <div className="meta-item">
               <span className="meta-label">Fast arrivals</span>
@@ -76,10 +76,9 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
             <div className="empty-state" style={{ maxWidth: "none", textAlign: "left" }}>
               <p className="eyebrow">Nothing to score</p>
               <p style={{ margin: 0, maxWidth: "62ch" }}>
-                This wallet made no qualifying buy in the last {LOOKBACK_DAYS} days. Zatto counts a buy only when the
-                wallet spends a quote asset, USDC or ETH, on something else, and only once it is old enough for a 24
-                hour return to settle. Sells, swaps between two quote assets and buys from the last two days are all
-                left out, which is why every figure above is a zero rather than a low number.
+                This wallet made no qualifying buy in the last {LOOKBACK_DAYS} days. Zatto counts a buy when the
+                wallet spends USDC or ETH on a token, once it is old enough to carry a 24 hour return. That is why
+                every figure above is a zero rather than a low number.
               </p>
             </div>
           ) : (
@@ -88,19 +87,19 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
 
               {snap.score.n > 0 && snap.score.n < MIN_USABLE_BUYS ? (
                 <p className="foot-note">
-                  THIN because {snap.score.n} scored {snap.score.n === 1 ? "buy is" : "buys are"} under the floor of{" "}
+                  THIN: {snap.score.n} scored {snap.score.n === 1 ? "buy" : "buys"}, under the floor of{" "}
                   {MIN_USABLE_BUYS}.
                 </p>
               ) : null}
 
               <div className="card-list" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
                 <div className="card">
-                  <p className="eyebrow" style={{ marginBottom: 4 }}>Delayed-entry 24h</p>
+                  <p className="eyebrow" style={{ marginBottom: 4 }}>Copy return, 24h</p>
                   <p style={{ margin: 0 }}>Crowded <GroupDelta group={snap.score.delayed24h.crowded} /></p>
                   <p style={{ margin: 0 }}>Quiet <GroupDelta group={snap.score.delayed24h.uncrowded} /></p>
                 </div>
                 <div className="card">
-                  <p className="eyebrow" style={{ marginBottom: 4 }}>Leader 24h</p>
+                  <p className="eyebrow" style={{ marginBottom: 4 }}>The wallet&apos;s own 24h</p>
                   <p style={{ margin: 0 }}>Crowded <GroupDelta group={snap.score.leader24h.crowded} /></p>
                   <p style={{ margin: 0 }}>Quiet <GroupDelta group={snap.score.leader24h.uncrowded} /></p>
                 </div>
@@ -110,10 +109,10 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
                 <table className="data data-cards">
                   <thead>
                     <tr>
-                      <th>Time</th><th>Token</th><th className="num">Baseline/h</th>
+                      <th>Time</th><th>Token</th><th className="num">Normal/h</th>
                       <th className="num">New 10m</th><th className="num">New 30m</th><th className="num">New 60m</th>
-                      <th className="num">Fast</th><th className="num">Burst 10m</th><th className="num">Ratio 60m</th>
-                      <th className="num">Leader 24h</th><th className="num">Delayed 24h</th>
+                      <th className="num">Fast</th><th className="num">Vs normal 10m</th><th className="num">Vs normal 60m</th>
+                      <th className="num">Wallet 24h</th><th className="num">Copy 24h</th>
                       <th>State</th><th>Tx</th>
                     </tr>
                   </thead>
@@ -126,15 +125,15 @@ export default async function WalletPage({ params, searchParams }: { params: Pro
                             {symbols.get(b.token) ?? shortAddr(b.token)}
                           </a>
                         </td>
-                        <td data-label="Baseline/h" className="num">{b.baselineRate}</td>
+                        <td data-label="Normal/h" className="num">{b.baselineRate}</td>
                         <td data-label="New 10m" className="num">{b.newBuyers.m10}</td>
                         <td data-label="New 30m" className="num">{b.newBuyers.m30}</td>
                         <td data-label="New 60m" className="num">{b.newBuyers.m60}</td>
                         <td data-label="Fast" className="num">{b.fastShare == null ? "n/a" : fmtPct(b.fastShare)}</td>
-                        <td data-label="Burst 10m" className="num">{b.crowdRatio10.toFixed(2)}x{b.crowded ? <span className="pill-note">crowded</span> : null}</td>
-                        <td data-label="Ratio 60m" className="num">{b.crowdRatio.toFixed(2)}x</td>
-                        <td data-label="Leader 24h" className="num"><Delta value={b.leaderReturn.h24} /></td>
-                        <td data-label="Delayed 24h" className="num"><Delta value={b.delayedReturn.h24} /></td>
+                        <td data-label="Vs normal 10m" className="num">{b.crowdRatio10.toFixed(2)}x{b.crowded ? <span className="pill-note">crowded</span> : null}</td>
+                        <td data-label="Vs normal 60m" className="num">{b.crowdRatio.toFixed(2)}x</td>
+                        <td data-label="Wallet 24h" className="num"><Delta value={b.leaderReturn.h24} /></td>
+                        <td data-label="Copy 24h" className="num"><Delta value={b.delayedReturn.h24} /></td>
                         <td data-label="State">{b.usable ? "scored" : b.exclusion}</td>
                         <td data-label="Tx"><a href={explorerTx(chain, b.tx)} target="_blank" rel="noopener noreferrer">tx</a></td>
                       </tr>

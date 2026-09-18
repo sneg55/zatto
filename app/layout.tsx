@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import "./globals.css";
 
-export const metadata = { title: "Zatto", description: "New buyers after Smart Money buys on Base" };
+export const metadata = {
+  title: "Zatto",
+  description: "Which Base tokens are pulling new buyers in behind Smart Money, and what that has been worth a day later.",
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -22,7 +25,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <nav className="site-nav">
               <Link href="/copied/base">Worth copying</Link>
               <Link href="/scan/base">Base leaderboard</Link>
-              <Link href="/#method">How it measures</Link>
             </nav>
           </div>
         </header>
@@ -31,6 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="shell site-footer-inner">
             <span className="footer-note">Zatto reads Base through the Nansen API.</span>
             <span className="footer-links">
+              <a href="https://github.com/sneg55/zatto#method" target="_blank" rel="noopener noreferrer">How it measures</a>
               <a href="https://github.com/sneg55/zatto" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
               <a href="https://nansen.ai" target="_blank" rel="noopener noreferrer">Powered by Nansen API</a>
             </span>
