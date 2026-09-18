@@ -53,35 +53,34 @@ A burst settles `BURST_MINUTES + MATURITY_MINUTES` after the buy. A return needs
 
 ```mermaid
 flowchart LR
-  U["Browser"]
-  subgraph cf["Cloudflare"]
-    W["Worker<br/>Next.js 16 via OpenNext"]
-    D[("D1<br/>hour-bucketed tape,<br/>scores, observations, jobs")]
-    C(["Cron, every 5 min"])
+  U[Browser]
+  subgraph cf[Cloudflare]
+    W[Worker. Next.js 16 via OpenNext]
+    D[(D1. tape cache, scores, observations, jobs)]
+    C[Cron every 5 min]
   end
-  N["Nansen API"]
-  F["PayAI facilitator"]
-  U -->|"token and wallet pages"| W
-  U -->|"POST /api/scan/base"| W
+  N[Nansen API]
+  F[PayAI facilitator]
+  U -->|token and wallet pages| W
+  U -->|POST /api/scan/base| W
   C --> W
-  W <--> D
-  W -->|"screener, tgm/dex-trades,<br/>profiler, token-ohlcv"| N
-  W -->|"verify and settle 1 USDC"| F
+  W --> D
+  D --> W
+  W -->|screener, dex-trades, profiler, ohlcv| N
+  W -->|verify and settle 1 USDC| F
 ```
 
 A run is a chain of short steps rather than one long request, because a Worker cannot sit on a 20 minute job. Each step takes a lease, does what it can inside its budget, writes to D1 and triggers the next one.
 
 ```mermaid
-stateDiagram-v2
-  [*] --> queued: cron, or a settled payment
-  queued --> planning
-  planning --> scoring: tokens discovered, wallets ranked
-  scoring --> scoring: one wallet per step
-  scoring --> forming: wallets done
-  forming --> published
-  published --> [*]
-  planning --> failed
-  scoring --> failed: request cap, Nansen error, budget
+flowchart LR
+  Q[queued] --> P[planning]
+  P --> S[scoring]
+  S -->|one wallet per step| S
+  S --> FM[forming]
+  FM --> PB[published]
+  P --> X[failed]
+  S --> X
 ```
 
 A step that dies holding a lease is picked up by the sweeper and resumed where it stopped, not restarted. The forming pass runs last, under its own request and time budget, so it can never keep a fully scored run from publishing.
