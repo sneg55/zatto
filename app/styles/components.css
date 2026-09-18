@@ -389,10 +389,6 @@ table.data a:hover {
 }
 
 .hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr);
-  gap: 48px;
-  align-items: start;
   padding-block: 16px 56px;
   border-bottom: 1px solid var(--stone);
 }
@@ -401,55 +397,12 @@ table.data a:hover {
   max-width: 52ch;
 }
 
-.hero-panel {
-  border: 1px solid var(--ink-black);
-  border-radius: var(--radius);
-  background: var(--bone);
-  padding: 24px;
-}
 
-.hero-panel-figure {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 64px;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  margin: 4px 0 8px;
-}
 
-.hero-panel-label {
-  font-size: 13px;
-  color: var(--graphite);
-  margin: 0 0 16px;
-}
 
-.hero-panel-note {
-  font-size: 14px;
-  line-height: 1.5;
-  margin: 0 0 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--stone);
-}
 
-.hero-panel-meta {
-  font-size: 12px;
-  color: var(--ash-gray);
-  margin: 0;
-}
 
-.hero-panel-meta a {
-  font-family: var(--font-mono);
-  color: var(--graphite);
-  text-decoration: none;
-  border-bottom: 1px solid var(--fog);
-}
 
-@media (max-width: 860px) {
-  .hero {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-}
 
 .th-sort {
   appearance: none;

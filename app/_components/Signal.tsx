@@ -22,12 +22,3 @@ export function Signal({ rate, burst, at, subject }: { rate: BaseRate | null; bu
     </p>
   );
 }
-
-export function NoSignal({ threshold, hours, subject }: { threshold: number; hours: number; subject: string }) {
-  return (
-    <p className="signal signal-quiet">
-      No Smart Money entry in {subject} has drawn {threshold} times the prior-hour buyer rate in the last {hours}{" "}
-      hours.
-    </p>
-  );
-}
