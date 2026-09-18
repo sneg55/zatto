@@ -201,10 +201,6 @@ The board also names an address cluster: seven of the thirty wallets carry byte-
 
 Zatto reads four Nansen endpoints, all redistribution-allowed with attribution: `token-screener`, `tgm/dex-trades`, `profiler/dex-trades`, and `tgm/token-ohlcv`. Every page in the app shows "Powered by Nansen API".
 
-## Prior work
-
-[github.com/sneg55/anthroalert](https://github.com/sneg55/anthroalert) is a March 2026 Nansen CLI challenge entry. It is unrelated code; nothing from it is reused here.
-
 ## License
 
 MIT, see `LICENSE`.
