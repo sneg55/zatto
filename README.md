@@ -1,12 +1,26 @@
 # Zatto
 
+[![live](https://img.shields.io/badge/live-zatto.nsawinyh.workers.dev-0f766e)](https://zatto.nsawinyh.workers.dev)
+[![tests](https://github.com/sneg55/zatto/actions/workflows/ci.yml/badge.svg)](https://github.com/sneg55/zatto/actions/workflows/ci.yml)
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-f38020)](https://developers.cloudflare.com/workers/)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-000000)](https://nextjs.org)
+[![x402](https://img.shields.io/badge/x402-1%20USDC%20on%20Base-0052ff)](https://x402.org)
+[![Powered by Nansen API](https://img.shields.io/badge/data-Nansen%20API-111111)](https://nansen.ai)
+[![MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
+
 Point it at a Base token and it tells you which Smart Money wallets bought it, how many new buyers arrived in the 10 minutes after each buy, and what tokens at that level of buying have done a day later. Point it at a wallet and it tells you who buys behind it and what copying it returned.
 
 Built for the Nansen Meridian Buildathon (Sep 14-27, 2026). Powered by Nansen API.
 
 ## What Zatto measures
 
-For a chain, Zatto ranks the tokens Smart Money bought by how hard a burst of new buyers followed, with the wallets that triggered each burst nested under it, and the wallet leaderboard below as supporting detail. For a wallet it reports new buyers after each of its buys against the token's prior rate, how fast they arrive, and what a delayed entry after the wallet would have returned. For a token it reads every Smart Money buy over `TOKEN_SCAN_DAYS` days and scores the burst that followed each entry. For one wallet it shows a provisional panel of the buyers arriving after its newest buy.
+Zatto has three subjects.
+
+A **token** is the main one. It reads every Smart Money buy in that token over `TOKEN_SCAN_DAYS` days and measures the burst of new buyers that followed each one, then states how buys at that burst have done 24 hours later.
+
+A **wallet** gets the same measurement over its own recent buys, plus what a delayed entry behind it returned. Its page carries a live panel of the buyers arriving after its newest buy, scored on burst alone because no return has settled yet.
+
+A **run** sweeps a chain. It ranks the tokens Smart Money bought by the hardest burst each one took, nests the wallets that triggered those bursts under them, and puts the wallet leaderboard below as supporting detail.
 
 Zatto claims three things, and only these:
 
@@ -15,6 +29,62 @@ Zatto claims three things, and only these:
 - The token's price return from the wallet's fill and from a delayed entry, at fixed horizons.
 
 Zatto does not claim any address copied the wallet, and it does not predict.
+
+## How one buy is measured
+
+```
+        t-60m                      t0                  t+10m                t+24h
+          |-------- baseline -------|------- burst ------|                     |
+                                    |
+                                    +-- t+60s: the copy entry is priced here,
+                                                and marked again at t+1h and t+24h
+
+  baseline   distinct addresses that bought this token in the hour before the buy,
+             never treated as lower than BASELINE_FLOOR
+  burst      distinct new buyers in the 10 minutes after, over that baseline scaled
+             to 10 minutes and floored at BURST_FLOOR. From CROWD_RATIO it is crowded.
+  copy       what buying DELAYED_ENTRY_SECONDS after the wallet and holding returned
+  leader     the same return priced at the wallet's own fill, for comparison
+```
+
+A burst settles `BURST_MINUTES + MATURITY_MINUTES` after the buy. A return needs a full day, and the profiler will not honour a `date.to` bound inside roughly the last day, so a buy is only scored once it is `SCORABLE_AGE_MINUTES` old. Everything newer than that goes on the Forming now board with a burst and no return.
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  U["Browser"]
+  subgraph cf["Cloudflare"]
+    W["Worker&#8203;<br/>Next.js 16 via OpenNext"]
+    D[("D1&#8203;<br/>hour-bucketed tape,<br/>scores, observations, jobs")]
+    C(["Cron, every 5 min"])
+  end
+  N["Nansen API"]
+  F["PayAI facilitator"]
+  U -->|"token and wallet pages"| W
+  U -->|"POST /api/scan/base"| W
+  C --> W
+  W <--> D
+  W -->|"screener, tgm/dex-trades,<br/>profiler, token-ohlcv"| N
+  W -->|"verify and settle 1 USDC"| F
+```
+
+A run is a chain of short steps rather than one long request, because a Worker cannot sit on a 20 minute job. Each step takes a lease, does what it can inside its budget, writes to D1 and triggers the next one.
+
+```mermaid
+stateDiagram-v2
+  [*] --> queued: cron, or a settled payment
+  queued --> planning
+  planning --> scoring: tokens discovered, wallets ranked
+  scoring --> scoring: one wallet per step
+  scoring --> forming: wallets done
+  forming --> published
+  published --> [*]
+  planning --> failed
+  scoring --> failed: request cap, Nansen error, budget
+```
+
+A step that dies holding a lease is picked up by the sweeper and resumed where it stopped, not restarted. The forming pass runs last, under its own request and time budget, so it can never keep a fully scored run from publishing.
 
 ## Verdicts
 
