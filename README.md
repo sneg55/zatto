@@ -74,13 +74,11 @@ A run is a chain of short steps rather than one long request, because a Worker c
 
 ```mermaid
 flowchart LR
-  Q[queued] --> P[planning]
-  P --> S[scoring]
+  Q[queued] --> P[planning] --> S[scoring]
   S -->|one wallet per step| S
-  S --> FM[forming]
-  FM --> PB[published]
-  P --> X[failed]
-  S --> X
+  S --> FM[forming] --> PB[published]
+  P -.-> X[failed]
+  S -.-> X
 ```
 
 A step that dies holding a lease is picked up by the sweeper and resumed where it stopped, not restarted. The forming pass runs last, under its own request and time budget, so it can never keep a fully scored run from publishing.
