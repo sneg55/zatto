@@ -6,8 +6,8 @@ export function Signal({ rate, burst, at, subject }: { rate: BaseRate | null; bu
   if (!rate) return null;
   return (
     <p className="signal">
-      A Smart Money wallet bought {subject} {fmtAge(at)}, and {fmtRatio(burst)} the token&apos;s normal buyer rate
-      showed up in the 10 minutes after.{" "}
+      A Smart Money buy in {subject}, {fmtAge(at)}, pulled {fmtRatio(burst)} the token&apos;s normal buyer rate in
+      the 10 minutes after.{" "}
       {rate.statable ? (
         <>
           Of the {rate.n} buys Zatto has measured at {rate.label} across {rate.tokens} tokens, {rate.higher} were
